@@ -63,11 +63,18 @@ services:
     build:
       context: .
       dockerfile: apps/web/Dockerfile
+      args:
+        NEXT_PUBLIC_MAIN_DOMAIN: ${NEXT_PUBLIC_MAIN_DOMAIN:-https://synthplay.games}
+        NEXT_PUBLIC_ADMIN_DOMAIN: ${NEXT_PUBLIC_ADMIN_DOMAIN:-https://admin.synthplay.games}
+        NEXT_PUBLIC_SANDBOX_DOMAIN: ${NEXT_PUBLIC_SANDBOX_DOMAIN:-https://synthplay-box.cloud}
     restart: unless-stopped
     env_file: .env
     environment:
       PORT: 3000
       NODE_ENV: production
+      SYNTHPLAY_STORE_PATH: /app/data/synthplay-store.json
+    volumes:
+      - synthplay_data:/app/data
     depends_on:
       postgres:
         condition: service_healthy
@@ -82,11 +89,17 @@ services:
     build:
       context: .
       dockerfile: apps/admin/Dockerfile
+      args:
+        NEXT_PUBLIC_MAIN_DOMAIN: ${NEXT_PUBLIC_MAIN_DOMAIN:-https://synthplay.games}
+        NEXT_PUBLIC_ADMIN_DOMAIN: ${NEXT_PUBLIC_ADMIN_DOMAIN:-https://admin.synthplay.games}
     restart: unless-stopped
     env_file: .env
     environment:
       PORT: 3001
       NODE_ENV: production
+      SYNTHPLAY_STORE_PATH: /app/data/synthplay-store.json
+    volumes:
+      - synthplay_data:/app/data
     depends_on:
       postgres:
         condition: service_healthy
@@ -101,3 +114,4 @@ volumes:
   pg_data:
   redis_data:
   meili_data:
+  synthplay_data:

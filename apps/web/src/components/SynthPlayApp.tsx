@@ -251,7 +251,7 @@ export function SynthPlayApp({ initial }: { initial: InitialData }) {
                 {t(locale, "navSponsor")}
               </button>
               <a
-                href="http://localhost:3001"
+                href={process.env.NEXT_PUBLIC_ADMIN_DOMAIN || "http://localhost:3001"}
                 target="_blank"
                 rel="noreferrer"
                 className="sp-nav-link"

@@ -99,13 +99,13 @@ export function AdminConsole({ initial }: { initial: AdminData }) {
 
         <div style={{ marginTop: "auto", paddingTop: 16, borderTop: "1px solid var(--line)" }}>
           <a
-            href="http://localhost:3000"
+            href={process.env.NEXT_PUBLIC_MAIN_DOMAIN || "http://localhost:3000"}
             target="_blank"
             rel="noreferrer"
             className="ops-btn"
             style={{ display: "block", textAlign: "center", textDecoration: "none" }}
           >
-            OPEN STOREFRONT :3000 ↗
+            OPEN STOREFRONT ↗
           </a>
         </div>
       </aside>
