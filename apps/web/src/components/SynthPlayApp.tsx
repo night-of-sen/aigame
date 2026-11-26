@@ -941,9 +941,12 @@ export function SynthPlayApp({ initial }: { initial: InitialData }) {
 
       {/* Footer */}
       <footer style={{ borderTop: "1px solid var(--hairline)", padding: "24px", position: "relative", zIndex: 10, background: "rgba(6,7,10,0.92)" }}>
-        <div className="sp-container font-mono" style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", gap: 12, fontSize: 11, color: "var(--ink-muted)", padding: 0 }}>
+        <div className="sp-container font-mono" style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", gap: 12, fontSize: 11, color: "var(--ink-muted)", padding: 0 }}>
           <span>SYNTHPLAY // SYNTHPLAY.GAMES · SANDBOX: *.SYNTHPLAY-BOX.CLOUD</span>
-          <span>OPTION B: VPS DOCKER + CLOUDFLARE R2 (0 EGRESS) · PAYPAL / PAYONEER / CREEM / KO-FI / PATREON</span>
+          <div style={{ display: "flex", gap: 18, alignItems: "center" }}>
+            <a href="/privacy" style={{ color: "var(--ink-muted)", textDecoration: "none" }}>PRIVACY POLICY</a>
+            <a href="/terms" style={{ color: "var(--ink-muted)", textDecoration: "none" }}>TERMS OF SERVICE</a>
+          </div>
         </div>
       </footer>
     </div>
