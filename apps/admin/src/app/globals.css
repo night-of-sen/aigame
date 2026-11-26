@@ -1,0 +1,124 @@
+:root {
+  --bg: #090b10;
+  --panel: #10131b;
+  --panel-alt: #161a25;
+  --line: rgba(255, 255, 255, 0.1);
+  --line-strong: rgba(255, 255, 255, 0.22);
+  --volt: #f3ff00;
+  --cyan: #00f0d4;
+  --red: #ff2a3c;
+  --amber: #ff9f1c;
+  --ink: #eef1f7;
+  --muted: #8a92a6;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-sans), "PingFang SC", sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+.font-display { font-family: var(--font-display), sans-serif; text-transform: uppercase; letter-spacing: 0.02em; }
+.font-mono { font-family: var(--font-mono), monospace; font-variant-numeric: tabular-nums; }
+
+.ops-shell {
+  display: grid;
+  grid-template-columns: 248px minmax(0, 1fr);
+  min-height: 100vh;
+}
+
+.ops-sidebar {
+  background: #07090d;
+  border-right: 1px solid var(--line);
+  padding: 20px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ops-nav-btn {
+  width: 100%;
+  text-align: left;
+  padding: 10px 12px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--muted);
+  font-family: var(--font-mono), monospace;
+  font-size: 12px;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: all 0.14s ease;
+}
+
+.ops-nav-btn:hover { color: var(--ink); background: rgba(255,255,255,0.03); }
+.ops-nav-btn.active {
+  color: #07080b;
+  background: var(--volt);
+  font-weight: 700;
+}
+
+.ops-main {
+  padding: 26px 30px 60px;
+  overflow-x: auto;
+}
+
+.ops-card {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  padding: 18px;
+}
+
+.ops-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.ops-table th {
+  text-align: left;
+  padding: 10px 12px;
+  font-family: var(--font-mono), monospace;
+  font-size: 11px;
+  color: var(--muted);
+  border-bottom: 1px solid var(--line-strong);
+  background: var(--panel-alt);
+}
+
+.ops-table td {
+  padding: 11px 12px;
+  border-bottom: 1px solid var(--line);
+  vertical-align: middle;
+}
+
+.ops-btn {
+  padding: 6px 12px;
+  border: 1px solid var(--line-strong);
+  background: var(--panel-alt);
+  color: var(--ink);
+  font-family: var(--font-mono), monospace;
+  font-size: 11px;
+  cursor: pointer;
+}
+.ops-btn:hover { border-color: var(--volt); color: var(--volt); }
+.ops-btn-volt { background: var(--volt); color: #07080b; border-color: var(--volt); font-weight: 700; }
+.ops-btn-red { background: rgba(255,42,60,0.16); color: #ff7a85; border-color: rgba(255,42,60,0.45); }
+.ops-btn-cyan { background: rgba(0,240,212,0.14); color: var(--cyan); border-color: rgba(0,240,212,0.45); }
+
+.ops-input {
+  background: #07090d;
+  border: 1px solid var(--line-strong);
+  color: var(--ink);
+  padding: 8px 10px;
+  font-size: 12px;
+  width: 100%;
+}
+
+@media (max-width: 860px) {
+  .ops-shell { grid-template-columns: 1fr; }
+  .ops-sidebar { border-right: 0; border-bottom: 1px solid var(--line); flex-direction: row; flex-wrap: wrap; }
+}
