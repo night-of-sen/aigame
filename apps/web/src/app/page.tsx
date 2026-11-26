@@ -54,7 +54,8 @@ export default async function HomePage() {
               username: session.username,
               email: session.email,
               countryCode: session.countryCode,
-              role: session.role
+              role: session.role,
+              isProSupporter: Boolean(store.users.find((u) => u.id === session.sub)?.isProSupporter)
             }
           : null
       }}

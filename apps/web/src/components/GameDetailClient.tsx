@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import Link from "next/link";
 import type { GameRecord, ReviewRecord } from "@synthplay/db";
 import { ArcadeCabinetModal } from "./ArcadeCabinetModal";
+import { AdSenseSlot } from "./AdSenseSlot";
 import { IconPlay, IconShield, IconSpark } from "./Icons";
 
 export function GameDetailClient({
@@ -218,6 +219,12 @@ export function GameDetailClient({
             </div>
           </div>
         </div>
+
+        <AdSenseSlot
+          slotId={process.env.NEXT_PUBLIC_ADSENSE_SLOT_GAME}
+          onOpenSponsor={() => { window.location.href = "/"; }}
+          label="GAME CABINET SPONSOR"
+        />
       </main>
 
       {playing && (

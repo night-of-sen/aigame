@@ -9,6 +9,7 @@ export interface AuthUserSummary {
   email: string;
   countryCode: string;
   role: string;
+  isProSupporter?: boolean;
 }
 
 function GoogleIcon() {

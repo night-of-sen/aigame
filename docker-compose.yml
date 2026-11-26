@@ -67,6 +67,9 @@ services:
         NEXT_PUBLIC_MAIN_DOMAIN: ${NEXT_PUBLIC_MAIN_DOMAIN:-https://synthplay.games}
         NEXT_PUBLIC_ADMIN_DOMAIN: ${NEXT_PUBLIC_ADMIN_DOMAIN:-https://admin.synthplay.games}
         NEXT_PUBLIC_SANDBOX_DOMAIN: ${NEXT_PUBLIC_SANDBOX_DOMAIN:-https://synthplay-box.cloud}
+        NEXT_PUBLIC_ADSENSE_CLIENT: ${NEXT_PUBLIC_ADSENSE_CLIENT:-}
+        NEXT_PUBLIC_ADSENSE_SLOT_HALL: ${NEXT_PUBLIC_ADSENSE_SLOT_HALL:-}
+        NEXT_PUBLIC_ADSENSE_SLOT_GAME: ${NEXT_PUBLIC_ADSENSE_SLOT_GAME:-}
     restart: unless-stopped
     env_file: .env
     environment:

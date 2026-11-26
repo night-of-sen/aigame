@@ -14,6 +14,7 @@ import { SponsorView } from "./SponsorView";
 import { CyberBootLoader, CyberPageShutter } from "./CyberBootLoader";
 import { GameCardLivePreview } from "./GameCardLivePreview";
 import { AuthModal, type AuthUserSummary } from "./AuthModal";
+import { AdSenseSlot } from "./AdSenseSlot";
 import { IconCpu, IconGlobe, IconPlay, IconSpark, IconTrophy, IconUpload, IconVolume } from "./Icons";
 
 interface CountryRankItem {
@@ -829,6 +830,13 @@ export function SynthPlayApp({ initial }: { initial: InitialData }) {
                 </div>
               </aside>
             </div>
+
+            <AdSenseSlot
+              slotId={process.env.NEXT_PUBLIC_ADSENSE_SLOT_HALL}
+              isProSupporter={Boolean(currentUser?.isProSupporter)}
+              onOpenSponsor={() => navigateView("sponsor", "SPONSOR HUB")}
+              label="ARCADE HALL SPONSOR"
+            />
 
             {/* SPONSOR SHOWCASE SLOT #2: HALL OF PATRONS */}
             <section style={{ marginTop: 68 }}>
