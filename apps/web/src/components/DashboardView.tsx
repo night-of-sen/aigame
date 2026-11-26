@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import type { GameRecord, UserRecord } from "@synthplay/db";
-import { COUNTRIES, type Locale, t } from "@synthplay/i18n";
+import { COUNTRIES, getCountryName, type Locale, t } from "@synthplay/i18n";
 
 export function DashboardView({
   locale,
@@ -80,7 +80,7 @@ export function DashboardView({
             <div className="font-mono" style={{ fontSize: 11, color: "var(--ink-muted)", marginBottom: 6 }}>COUNTRY BADGE</div>
             <select className="sp-select" value={country} onChange={(e) => setCountry(e.target.value)}>
               {COUNTRIES.filter((c) => c.code !== "ALL").map((c) => (
-                <option key={c.code} value={c.code}>{c.code} — {c.nameZh}</option>
+                <option key={c.code} value={c.code}>{c.code} — {getCountryName(c.code, locale)}</option>
               ))}
             </select>
           </label>

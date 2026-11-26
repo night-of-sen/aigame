@@ -56,7 +56,21 @@ export const DICTIONARY: Record<Locale, Record<string, string>> = {
     studioTitle: "创作者游戏发布舱",
     studioSub: "支持标准 HTML5/WebGL ZIP 包上传，或直接粘贴单个 AI 生成的 HTML 文件 10 秒部署至安全沙箱",
     dashboardTitle: "玩家与创作者控制台",
-    sponsorPageTitle: "赞助方案与商业合作中心"
+    sponsorPageTitle: "赞助方案与商业合作中心",
+    authSignInBtn: "登录 / 注册",
+    authTitleLogin: "欢迎回到 SYNTHPLAY",
+    authTitleRegister: "一键加入 SYNTHPLAY",
+    authSub: "自动识别国家徽章 · 永久免费游玩与发布 AI 游戏",
+    authGoogleBtn: "使用 Google 账号一键登录",
+    authGoogleNotReady: "Google 登录待管理员在 .env 配置 GOOGLE_CLIENT_ID",
+    authOrEmail: "或使用邮箱继续",
+    authTabLogin: "登录",
+    authTabRegister: "快速注册",
+    authEmailLabel: "邮箱地址",
+    authPasswordLabel: "密码（至少 6 位）",
+    authSubmitLogin: "立即登录",
+    authSubmitRegister: "免费创建账号",
+    authAutoHint: "无需填写昵称与国家，系统将自动分配并支持在后台随时修改"
   },
   en: {
     navArcade: "ARCADE",
@@ -95,7 +109,21 @@ export const DICTIONARY: Record<Locale, Record<string, string>> = {
     studioTitle: "CREATOR UPLOAD BAY",
     studioSub: "Drop HTML5/WebGL ZIP bundles or paste single-file AI HTML code for instant sandbox scanning & deployment",
     dashboardTitle: "PLAYER & CREATOR CONSOLE",
-    sponsorPageTitle: "SPONSORSHIP & COMMERCIAL SLOTS"
+    sponsorPageTitle: "SPONSORSHIP & COMMERCIAL SLOTS",
+    authSignInBtn: "SIGN IN",
+    authTitleLogin: "WELCOME BACK",
+    authTitleRegister: "JOIN SYNTHPLAY FREE",
+    authSub: "Auto-detects your nation badge · Play & publish AI games free",
+    authGoogleBtn: "Continue with Google",
+    authGoogleNotReady: "Google OAuth awaiting GOOGLE_CLIENT_ID in .env",
+    authOrEmail: "OR CONTINUE WITH EMAIL",
+    authTabLogin: "SIGN IN",
+    authTabRegister: "SIGN UP",
+    authEmailLabel: "EMAIL ADDRESS",
+    authPasswordLabel: "PASSWORD (MIN 6 CHARS)",
+    authSubmitLogin: "SIGN IN",
+    authSubmitRegister: "CREATE FREE ACCOUNT",
+    authAutoHint: "Handle & country badge are auto-assigned and editable anytime in Studio."
   },
   ja: {
     navArcade: "アーケード",
@@ -134,7 +162,21 @@ export const DICTIONARY: Record<Locale, Record<string, string>> = {
     studioTitle: "クリエイター投稿ベイ",
     studioSub: "HTML5/WebGL ZIPまたは単一AI HTMLを貼り付けて即時セキュリティ検証・公開",
     dashboardTitle: "プレイヤー＆クリエイター管理",
-    sponsorPageTitle: "スポンサー＆協賛プラン"
+    sponsorPageTitle: "スポンサー＆協賛プラン",
+    authSignInBtn: "ログイン",
+    authTitleLogin: "おかえりなさい",
+    authTitleRegister: "SYNTHPLAY に参加",
+    authSub: "国バッジ自動判定 · AIゲームを無料でプレイ＆公開",
+    authGoogleBtn: "Google で続ける",
+    authGoogleNotReady: ".env に GOOGLE_CLIENT_ID を設定すると有効化されます",
+    authOrEmail: "またはメールで続ける",
+    authTabLogin: "ログイン",
+    authTabRegister: "新規登録",
+    authEmailLabel: "メールアドレス",
+    authPasswordLabel: "パスワード（6文字以上）",
+    authSubmitLogin: "ログイン",
+    authSubmitRegister: "無料アカウント作成",
+    authAutoHint: "ハンドル名と国バッジは自動設定され、マイページでいつでも変更できます。"
   },
   es: {
     navArcade: "ARCADE",
@@ -173,9 +215,41 @@ export const DICTIONARY: Record<Locale, Record<string, string>> = {
     studioTitle: "BAHÍA DE CARGA",
     studioSub: "Sube archivos ZIP HTML5/WebGL o pega código HTML generado por IA en 10 segundos",
     dashboardTitle: "CONSOLA DE USUARIO Y CREADOR",
-    sponsorPageTitle: "PATROCINIO Y ESPACIOS COMERCIALES"
+    sponsorPageTitle: "PATROCINIO Y ESPACIOS COMERCIALES",
+    authSignInBtn: "ENTRAR",
+    authTitleLogin: "BIENVENIDO DE NUEVO",
+    authTitleRegister: "ÚNETE GRATIS A SYNTHPLAY",
+    authSub: "Detecta tu país automáticamente · Juega y publica juegos IA gratis",
+    authGoogleBtn: "Continuar con Google",
+    authGoogleNotReady: "Falta configurar GOOGLE_CLIENT_ID en .env",
+    authOrEmail: "O CONTINÚA CON EMAIL",
+    authTabLogin: "ENTRAR",
+    authTabRegister: "REGISTRARSE",
+    authEmailLabel: "CORREO ELECTRÓNICO",
+    authPasswordLabel: "CONTRASEÑA (MÍN. 6)",
+    authSubmitLogin: "INICIAR SESIÓN",
+    authSubmitRegister: "CREAR CUENTA GRATIS",
+    authAutoHint: "Tu alias y país se asignan automáticamente y puedes cambiarlos en tu panel."
   }
 };
+
+export function detectLocaleFromHeader(acceptLanguage: string | null | undefined): Locale {
+  if (!acceptLanguage) return "en";
+  const lower = acceptLanguage.toLowerCase();
+  // Respect ordered language preferences in Accept-Language
+  const tags = lower.split(",").map((part) => part.split(";")[0].trim());
+  for (const tag of tags) {
+    if (tag.startsWith("en")) return "en";
+    if (tag.startsWith("zh")) return "zh-CN";
+    if (tag.startsWith("ja")) return "ja";
+    if (tag.startsWith("es")) return "es";
+  }
+  return "en";
+}
+
+export function isValidLocale(val: string | undefined | null): val is Locale {
+  return val === "en" || val === "zh-CN" || val === "ja" || val === "es";
+}
 
 export function t(locale: Locale, key: string): string {
   return DICTIONARY[locale]?.[key] ?? DICTIONARY.en[key] ?? key;

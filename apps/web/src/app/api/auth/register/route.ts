@@ -12,14 +12,9 @@ import {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const username = String(body.username || "").trim().replace(/[^a-zA-Z0-9_-]/g, "");
     const email = String(body.email || "").trim().toLowerCase();
     const password = String(body.password || "");
-    const countryCode = String(body.countryCode || "US").toUpperCase().slice(0, 4);
 
-    if (username.length < 2 || username.length > 32) {
-      return NextResponse.json({ error: "Username must be 2–32 letters/numbers." }, { status: 400 });
-    }
     if (!email.includes("@")) {
       return NextResponse.json({ error: "Please enter a valid email address." }, { status: 400 });
     }
@@ -31,9 +26,24 @@ export async function POST(req: NextRequest) {
     if (store.users.some((u) => u.email.toLowerCase() === email)) {
       return NextResponse.json({ error: "An account with this email already exists." }, { status: 409 });
     }
-    if (store.users.some((u) => u.username.toLowerCase() === username.toLowerCase())) {
-      return NextResponse.json({ error: "Username is already taken." }, { status: 409 });
-    }
+
+    // Auto-derive clean handle from email prefix if not provided (zero-friction signup)
+    const rawHandle = String(body.username || email.split("@")[0] || "Player")
+      .trim()
+      .replace(/[^a-zA-Z0-9_-]/g, "")
+      .slice(0, 22) || "Player";
+    const handleExists = store.users.some((u) => u.username.toLowerCase() === rawHandle.toLowerCase());
+    const username = handleExists ? `${rawHandle}_${Date.now().toString(36).slice(-3)}` : rawHandle;
+
+    // Auto-detect country from Cloudflare CF-IPCountry header (editable later in Studio)
+    const cfCountry = req.headers.get("cf-ipcountry");
+    const countryCode =
+      (typeof body.countryCode === "string" && body.countryCode.trim().length === 2
+        ? body.countryCode
+        : cfCountry && /^[A-Za-z]{2}$/.test(cfCountry)
+          ? cfCountry
+          : "US"
+      ).toUpperCase();
 
     const newUser: UserRecord = {
       id: `usr-${Date.now().toString(36)}`,
@@ -57,7 +67,7 @@ export async function POST(req: NextRequest) {
       actor: email,
       action: "USER_REGISTERED",
       target: `${newUser.id} (@${newUser.username})`,
-      detail: `Country: ${countryCode}`,
+      detail: `Auto country: ${countryCode}`,
       createdAt: new Date().toISOString()
     });
 

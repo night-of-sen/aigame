@@ -31,6 +31,8 @@ interface InitialData {
   sponsorSlots: SponsorSlotRecord[];
   monthlyFundingGoalUsd: number;
   monthlyFundingRaisedUsd: number;
+  initialLocale: Locale;
+  googleAuthEnabled: boolean;
   currentUser: AuthUserSummary | null;
 }
 
@@ -46,7 +48,7 @@ const LIVE_PULSE_FEED = [
 export function SynthPlayApp({ initial }: { initial: InitialData }) {
   const [view, setView] = useState<"arcade" | "studio" | "dashboard" | "sponsor">("arcade");
   const [shutter, setShutter] = useState<{ active: boolean; label: string }>({ active: false, label: "" });
-  const [locale, setLocale] = useState<Locale>("zh-CN");
+  const [locale, setLocale] = useState<Locale>(initial.initialLocale || "en");
   const [quality, setQuality] = useState<"ultra" | "balanced" | "lite">("ultra");
   const [sfxOn, setSfxOn] = useState(false);
   const [fps, setFps] = useState(60);
@@ -275,7 +277,11 @@ export function SynthPlayApp({ initial }: { initial: InitialData }) {
                 <button
                   key={l.code}
                   type="button"
-                  onClick={() => { arcadeAudio.playSwitch(); setLocale(l.code); }}
+                  onClick={() => {
+                    arcadeAudio.playSwitch();
+                    setLocale(l.code);
+                    document.cookie = `synthplay_locale=${l.code}; path=/; max-age=31536000; samesite=lax`;
+                  }}
                   className="font-mono"
                   style={{
                     padding: "5px 8px",
@@ -364,7 +370,7 @@ export function SynthPlayApp({ initial }: { initial: InitialData }) {
                 style={{ padding: "7px 14px", fontSize: 11 }}
                 onClick={() => setAuthModalOpen(true)}
               >
-                <span>{locale === "zh-CN" ? "登录 / 注册" : "SIGN IN"}</span>
+                <span>{t(locale, "authSignInBtn")}</span>
               </button>
             )}
           </div>
@@ -926,6 +932,8 @@ export function SynthPlayApp({ initial }: { initial: InitialData }) {
       {/* Auth Modal */}
       {authModalOpen && (
         <AuthModal
+          locale={locale}
+          googleEnabled={initial.googleAuthEnabled}
           onClose={() => setAuthModalOpen(false)}
           onSuccess={(u) => setCurrentUser(u)}
         />

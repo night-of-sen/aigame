@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import type { PaymentProvider } from "@synthplay/db";
-import { COUNTRIES, type Locale, t } from "@synthplay/i18n";
+import { COUNTRIES, getCountryName, type Locale, t } from "@synthplay/i18n";
 
 export function SponsorView({
   locale,
@@ -130,7 +130,7 @@ export function SponsorView({
             <div className="font-mono" style={{ fontSize: 11, color: "var(--volt)", marginBottom: 6 }}>COUNTRY</div>
             <select className="sp-select" value={country} onChange={(e) => setCountry(e.target.value)}>
               {COUNTRIES.filter((c) => c.code !== "ALL").map((c) => (
-                <option key={c.code} value={c.code}>{c.code} — {c.nameEn}</option>
+                <option key={c.code} value={c.code}>{c.code} — {getCountryName(c.code, locale)}</option>
               ))}
             </select>
           </label>

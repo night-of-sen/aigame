@@ -28,7 +28,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="zh-CN" className={`${chakra.variable} ${mono.variable} ${sans.variable}`}>
+    <html lang="en" className={`${chakra.variable} ${mono.variable} ${sans.variable}`}>
       <body>{children}</body>
     </html>
   );

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { COUNTRIES, type Locale, t } from "@synthplay/i18n";
+import { COUNTRIES, getCountryName, type Locale, t } from "@synthplay/i18n";
 import type { GameRecord } from "@synthplay/db";
 import { IconShield, IconUpload } from "./Icons";
 
@@ -136,7 +136,7 @@ export function StudioView({
             <div className="font-mono" style={{ fontSize: 11, color: "var(--volt)", marginBottom: 6 }}>CREATOR COUNTRY</div>
             <select className="sp-select" value={country} onChange={(e) => setCountry(e.target.value)}>
               {COUNTRIES.filter((c) => c.code !== "ALL").map((c) => (
-                <option key={c.code} value={c.code}>{c.code} — {c.nameZh} ({c.nameEn})</option>
+                <option key={c.code} value={c.code}>{c.code} — {getCountryName(c.code, locale)}</option>
               ))}
             </select>
           </label>

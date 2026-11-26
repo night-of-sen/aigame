@@ -1,18 +1,32 @@
 import React from "react";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import {
   USER_SESSION_COOKIE,
   computeCountryPowerRankings,
   loadFullStore,
   verifySessionToken
 } from "@synthplay/db";
+import { detectLocaleFromHeader, isValidLocale, type Locale } from "@synthplay/i18n";
 import { SynthPlayApp } from "@/components/SynthPlayApp";
 
 export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
-  const [store, cookieStore] = await Promise.all([loadFullStore(), cookies()]);
+  const [store, cookieStore, headerStore] = await Promise.all([
+    loadFullStore(),
+    cookies(),
+    headers()
+  ]);
   const session = verifySessionToken(cookieStore.get(USER_SESSION_COOKIE)?.value);
+
+  const savedLocale = cookieStore.get("synthplay_locale")?.value;
+  const initialLocale: Locale = isValidLocale(savedLocale)
+    ? savedLocale
+    : detectLocaleFromHeader(headerStore.get("accept-language"));
+
+  const googleAuthEnabled = Boolean(
+    process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET
+  );
 
   const published = store.games.filter((g) => g.status === "published");
   const topPlayed = [...published].sort((a, b) => b.totalValidPlays - a.totalValidPlays).slice(0, 10);
@@ -32,6 +46,8 @@ export default async function HomePage() {
         sponsorSlots: store.sponsorSlots.filter((s) => s.isActive),
         monthlyFundingGoalUsd: store.monthlyFundingGoalUsd,
         monthlyFundingRaisedUsd: store.monthlyFundingRaisedUsd,
+        initialLocale,
+        googleAuthEnabled,
         currentUser: session
           ? {
               id: session.sub,
