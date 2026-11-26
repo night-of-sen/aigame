@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import { COUNTRIES, getCountryName, type Locale, t } from "@synthplay/i18n";
 import type { GameRecord } from "@synthplay/db";
 import { IconShield, IconUpload } from "./Icons";
@@ -44,20 +44,132 @@ export function StudioView({
   const [title, setTitle] = useState("");
   const [tagline, setTagline] = useState("");
   const [creatorName, setCreatorName] = useState("NightOfSen");
-  const [country, setCountry] = useState("CN");
+  const [country, setCountry] = useState("US");
   const [category, setCategory] = useState("ARCADE");
   const [aiTools, setAiTools] = useState("Claude, Single-HTML, Canvas2D");
   const [tipUrl, setTipUrl] = useState("https://ko-fi.com/synthplay");
   const [sandboxHtml, setSandboxHtml] = useState("");
+  const [zipFile, setZipFile] = useState<File | null>(null);
+  const [dragActive, setDragActive] = useState(false);
   const [publishNow, setPublishNow] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [stageLabel, setStageLabel] = useState("RUNNING AST SANDBOX SCAN...");
   const [resultMsg, setResultMsg] = useState<{ ok: boolean; text: string; score?: number } | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const handleZipSelect = (file: File | null) => {
+    if (!file) return;
+    if (!file.name.toLowerCase().endsWith(".zip")) {
+      setResultMsg({ ok: false, text: "Only .zip HTML5/WebGL bundles are accepted." });
+      return;
+    }
+    if (file.size > 100 * 1024 * 1024) {
+      setResultMsg({ ok: false, text: "ZIP bundle exceeds 100MB safety limit." });
+      return;
+    }
+    setResultMsg(null);
+    setZipFile(file);
+    if (!title) {
+      setTitle(file.name.replace(/\.zip$/i, "").replace(/[-_]+/g, " ").toUpperCase());
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
     setResultMsg(null);
+
     try {
+      if (mode === "html5_zip") {
+        if (!zipFile) {
+          setResultMsg({ ok: false, text: "Please select or drop a .zip game bundle containing index.html." });
+          setSubmitting(false);
+          return;
+        }
+
+        setStageLabel("REQUESTING R2 QUARANTINE SLOT...");
+        const presignRes = await fetch("/api/uploads/presign", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ fileName: zipFile.name, sizeBytes: zipFile.size })
+        });
+        const presign = await presignRes.json();
+        if (!presignRes.ok) {
+          setResultMsg({ ok: false, text: presign.error || "Failed to initialize ZIP upload." });
+          setSubmitting(false);
+          return;
+        }
+
+        let uploadRes: Response;
+        if (presign.mode === "r2_presigned" && presign.uploadUrl && presign.quarantineKey) {
+          setStageLabel("UPLOADING DIRECTLY TO CLOUDFLARE R2 QUARANTINE...");
+          const putRes = await fetch(presign.uploadUrl, {
+            method: "PUT",
+            headers: { "Content-Type": "application/zip" },
+            body: zipFile
+          });
+          if (!putRes.ok) {
+            setResultMsg({ ok: false, text: "Direct upload to Cloudflare R2 quarantine failed. Check R2 CORS settings." });
+            setSubmitting(false);
+            return;
+          }
+
+          setStageLabel("UNZIPPING · ZIP-BOMB GUARD · AST SCAN · AI TRANSLATING...");
+          uploadRes = await fetch("/api/uploads/zip", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              quarantineKey: presign.quarantineKey,
+              title: title || zipFile.name.replace(/\.zip$/i, ""),
+              tagline: tagline || "Community HTML5/WebGL ZIP game deployed to SYNTHPLAY Sandbox.",
+              creatorName,
+              creatorCountryCode: country,
+              category,
+              aiTools: aiTools.split(",").map((s) => s.trim()).filter(Boolean),
+              creatorTipUrl: tipUrl,
+              publishImmediately: publishNow
+            })
+          });
+        } else {
+          setStageLabel("UPLOADING · UNZIPPING · AST SCAN · AI TRANSLATING...");
+          const formData = new FormData();
+          formData.append("file", zipFile);
+          formData.append("title", title || zipFile.name.replace(/\.zip$/i, ""));
+          formData.append("tagline", tagline || "Community HTML5/WebGL ZIP game deployed to SYNTHPLAY Sandbox.");
+          formData.append("creatorName", creatorName);
+          formData.append("creatorCountryCode", country);
+          formData.append("category", category);
+          formData.append("aiTools", aiTools);
+          formData.append("creatorTipUrl", tipUrl);
+          formData.append("publishImmediately", String(publishNow));
+
+          uploadRes = await fetch("/api/uploads/zip", {
+            method: "POST",
+            body: formData
+          });
+        }
+
+        const data = await uploadRes.json();
+        if (!uploadRes.ok) {
+          setResultMsg({ ok: false, text: data.error || "ZIP bundle blocked by security sandbox." });
+        } else {
+          const storageTag = data.storageMode === "cloudflare_r2" ? "CLOUDFLARE R2 CDN" : "LOCAL SANDBOX";
+          const i18nTag = data.translated ? " · AI 4-LANG TRANSLATED" : "";
+          setResultMsg({
+            ok: true,
+            text:
+              data.game.status === "published"
+                ? `Published LIVE (${data.fileCount} files -> ${storageTag}${i18nTag})! Security: ${data.scanReport.verdict} (${data.scanReport.score}/100).`
+                : `Submitted to Admin Review (${data.fileCount} files -> ${storageTag}${i18nTag})! Security: ${data.scanReport.verdict} (${data.scanReport.score}/100).`,
+            score: data.scanReport.score
+          });
+          setZipFile(null);
+          onUploaded(data.game);
+        }
+        return;
+      }
+
+      setStageLabel("RUNNING AST SANDBOX SCAN & AI TRANSLATION...");
       const res = await fetch("/api/games", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -71,7 +183,7 @@ export function StudioView({
           category,
           aiTools: aiTools.split(",").map((s) => s.trim()).filter(Boolean),
           creatorTipUrl: tipUrl,
-          sandboxHtml: mode === "single_html" ? sandboxHtml : undefined,
+          sandboxHtml,
           publishImmediately: publishNow
         })
       });
@@ -79,12 +191,13 @@ export function StudioView({
       if (!res.ok) {
         setResultMsg({ ok: false, text: data.error || "Upload blocked by security sandbox." });
       } else {
+        const i18nTag = data.translated ? " · AI 4-LANG TRANSLATED" : "";
         setResultMsg({
           ok: true,
           text:
             data.game.status === "published"
-              ? `Published LIVE! Security Scan: ${data.scanReport.verdict} (${data.scanReport.score}/100). Click Play in Arcade Hall now.`
-              : `Submitted to Admin Review Queue! Security Scan: ${data.scanReport.verdict} (${data.scanReport.score}/100).`,
+              ? `Published LIVE${i18nTag}! Security Scan: ${data.scanReport.verdict} (${data.scanReport.score}/100). Click Play in Arcade Hall now.`
+              : `Submitted to Admin Review Queue${i18nTag}! Security Scan: ${data.scanReport.verdict} (${data.scanReport.score}/100).`,
           score: data.scanReport.score
         });
         onUploaded(data.game);
@@ -156,7 +269,7 @@ export function StudioView({
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 16 }}>
           <label>
             <div className="font-mono" style={{ fontSize: 11, color: "var(--ink-muted)", marginBottom: 6 }}>GAME SUMMARY</div>
-            <input className="sp-input" value={tagline} onChange={(e) => setTagline(e.target.value)} placeholder="One-line hook (auto-translated to 4 languages on publish)" />
+            <input className="sp-input" value={tagline} onChange={(e) => setTagline(e.target.value)} placeholder="One-line hook (auto-translated to EN/ZH/JA/ES on publish)" />
           </label>
           <label>
             <div className="font-mono" style={{ fontSize: 11, color: "var(--ink-muted)", marginBottom: 6 }}>AI TOOLCHAIN TAGS (COMMA SEPARATED)</div>
@@ -196,14 +309,54 @@ export function StudioView({
             />
           </div>
         ) : (
-          <div style={{ padding: 28, border: "1px dashed var(--hairline-strong)", background: "#0a0c11", textAlign: "center" }}>
-            <IconUpload size={28} />
-            <div className="font-display" style={{ marginTop: 10, fontSize: 15 }}>
-              DROP HTML5 / UNITY WEBGL / GODOT .ZIP BUNDLE (MAX 100MB)
-            </div>
-            <p className="font-mono" style={{ fontSize: 12, color: "var(--ink-muted)", marginTop: 6 }}>
-              Direct presigned upload to Cloudflare R2 Quarantine Bucket -&gt; Zip Bomb Guard -&gt; AST Security Scan -&gt; Isolated Sandbox Domain (*.synthplay-box.cloud)
-            </p>
+          <div
+            onClick={() => fileInputRef.current?.click()}
+            onDragOver={(e) => {
+              e.preventDefault();
+              setDragActive(true);
+            }}
+            onDragLeave={() => setDragActive(false)}
+            onDrop={(e) => {
+              e.preventDefault();
+              setDragActive(false);
+              handleZipSelect(e.dataTransfer.files?.[0] || null);
+            }}
+            style={{
+              padding: 32,
+              border: `1px dashed ${dragActive || zipFile ? "var(--volt)" : "var(--hairline-strong)"}`,
+              background: dragActive ? "rgba(243,255,0,0.06)" : "#0a0c11",
+              textAlign: "center",
+              cursor: "pointer",
+              transition: "border-color 140ms ease, background 140ms ease"
+            }}
+          >
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".zip,application/zip"
+              style={{ display: "none" }}
+              onChange={(e) => handleZipSelect(e.target.files?.[0] || null)}
+            />
+            <IconUpload size={30} />
+            {zipFile ? (
+              <>
+                <div className="font-display" style={{ marginTop: 10, fontSize: 16, color: "var(--volt)" }}>
+                  READY: {zipFile.name} ({(zipFile.size / 1024 / 1024).toFixed(2)} MB)
+                </div>
+                <p className="font-mono" style={{ fontSize: 12, color: "var(--cyan)", marginTop: 6 }}>
+                  Click to choose another .zip · Pipeline: R2 Quarantine -&gt; Zip Bomb Guard -&gt; AST Scan -&gt; Isolated Sandbox (*.synthplay-box.cloud)
+                </p>
+              </>
+            ) : (
+              <>
+                <div className="font-display" style={{ marginTop: 10, fontSize: 15 }}>
+                  DROP OR CLICK TO SELECT HTML5 / UNITY WEBGL / GODOT .ZIP BUNDLE (MAX 100MB)
+                </div>
+                <p className="font-mono" style={{ fontSize: 12, color: "var(--ink-muted)", marginTop: 6 }}>
+                  Must contain index.html · Auto-scanned for Zip Bombs, path traversal, miners &amp; cookie theft · Zero egress on Cloudflare R2
+                </p>
+              </>
+            )}
           </div>
         )}
 
@@ -215,7 +368,7 @@ export function StudioView({
 
           <button type="submit" className="btn-volt" disabled={submitting}>
             {submitting ? <span className="cyber-radar-spinner" /> : <IconShield size={16} />}
-            <span>{submitting ? "RUNNING AST SANDBOX SCAN..." : "RUN SECURITY SCAN & DEPLOY"}</span>
+            <span>{submitting ? stageLabel : mode === "html5_zip" ? "SCAN ZIP & DEPLOY TO SANDBOX" : "RUN SECURITY SCAN & DEPLOY"}</span>
           </button>
         </div>
 

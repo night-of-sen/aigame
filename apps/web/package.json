@@ -9,10 +9,13 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1178.0",
+    "@aws-sdk/s3-request-presigner": "^3.1178.0",
     "@synthplay/db": "workspace:*",
     "@synthplay/game-sdk": "workspace:*",
     "@synthplay/i18n": "workspace:*",
     "@synthplay/sandbox-security": "workspace:*",
+    "fflate": "^0.8.3",
     "next": "^15.2.4",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"

@@ -429,7 +429,7 @@ export function SynthPlayApp({ initial }: { initial: InitialData }) {
                     <ScrambleText text={heroGame.title} />
                   </h1>
                   <p style={{ maxWidth: 620, fontSize: 15, lineHeight: 1.65, color: "#d5dae6", margin: "0 0 18px" }}>
-                    {locale === "zh-CN" ? heroGame.taglineZh : heroGame.tagline}
+                    {heroGame.translations?.[locale]?.tagline || (locale === "zh-CN" ? heroGame.taglineZh : heroGame.tagline)}
                   </p>
 
                   {/* AI Toolchain Metadata Strip */}
@@ -684,7 +684,7 @@ export function SynthPlayApp({ initial }: { initial: InitialData }) {
                         <div style={{ padding: "15px 17px" }}>
                           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8 }}>
                             <h3 className="font-display" style={{ margin: 0, fontSize: 16, fontWeight: 700, color: isHovered ? "var(--volt)" : "#fff", transition: "color 0.2s ease" }}>
-                              {locale === "zh-CN" ? `${g.title} · ${g.titleZh}` : g.title}
+                              {g.translations?.[locale]?.title || (locale === "zh-CN" ? `${g.title} · ${g.titleZh}` : g.title)}
                             </h3>
                             <span className="font-mono" style={{ fontSize: 12, color: "var(--volt)", flexShrink: 0 }}>
                               ★ {g.rating.toFixed(2)}
@@ -692,7 +692,7 @@ export function SynthPlayApp({ initial }: { initial: InitialData }) {
                           </div>
 
                           <p style={{ fontSize: 12.5, color: "var(--ink-muted)", margin: "8px 0 12px", lineHeight: 1.5, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
-                            {locale === "zh-CN" ? g.taglineZh : g.tagline}
+                            {g.translations?.[locale]?.tagline || (locale === "zh-CN" ? g.taglineZh : g.tagline)}
                           </p>
 
                           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: 10, borderTop: "1px solid var(--hairline)", fontSize: 11, gap: 8 }}>

@@ -8,16 +8,28 @@ interface AdminData extends SynthPlayStore {
   countryPower: Array<{ countryCode: string; totalPlays: number; gameCount: number; avgRating: number }>;
 }
 
+export interface AdminIntegrationsStatus {
+  r2: boolean;
+  creem: boolean;
+  kofi: boolean;
+  patreon: boolean;
+  paypal: boolean;
+  aiTranslate: boolean;
+  aiProvider: string;
+}
+
 export function AdminConsole({
   initial,
   adminEmail,
   isDefaultPassword,
-  engine
+  engine,
+  integrations
 }: {
   initial: AdminData;
   adminEmail: string;
   isDefaultPassword: boolean;
   engine: { pg: boolean; redis: boolean };
+  integrations: AdminIntegrationsStatus;
 }) {
   const [data, setData] = useState<AdminData>(initial);
   const [tab, setTab] = useState<"overview" | "games" | "users" | "sponsors" | "finance" | "i18n">("overview");
@@ -40,12 +52,14 @@ export function AdminConsole({
       window.location.reload();
       return;
     }
+    const updated = await res.json();
     if (res.ok) {
-      const updated = await res.json();
       setData((prev) => ({ ...prev, ...updated.store }));
       setToast(message);
-      setTimeout(() => setToast(null), 3000);
+    } else {
+      setToast(`ERROR: ${updated.error || "Action failed"}`);
     }
+    setTimeout(() => setToast(null), 4000);
   };
 
   const pendingGames = data.games.filter((g) => g.status === "pending_review");
@@ -93,6 +107,12 @@ export function AdminConsole({
             </span>
             <span style={{ padding: "2px 6px", border: `1px solid ${engine.redis ? "var(--volt)" : "var(--line-strong)"}`, color: engine.redis ? "var(--volt)" : "var(--muted)" }}>
               {engine.redis ? "REDIS 7 LIVE" : "REDIS OFF"}
+            </span>
+            <span style={{ padding: "2px 6px", border: `1px solid ${integrations.r2 ? "var(--cyan)" : "var(--line-strong)"}`, color: integrations.r2 ? "var(--cyan)" : "var(--muted)" }}>
+              {integrations.r2 ? "R2 CDN LIVE" : "R2 STANDBY"}
+            </span>
+            <span style={{ padding: "2px 6px", border: `1px solid ${integrations.aiTranslate ? "var(--volt)" : "var(--line-strong)"}`, color: integrations.aiTranslate ? "var(--volt)" : "var(--muted)" }}>
+              {integrations.aiTranslate ? `AI ${integrations.aiProvider}` : "AI I18N OFF"}
             </span>
           </div>
         </div>
@@ -241,7 +261,7 @@ export function AdminConsole({
                       <td className="font-mono">{g.totalValidPlays.toLocaleString()}</td>
                       <td>
                         <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                          {g.sandboxHtml && (
+                          {(g.sandboxHtml || g.sandboxUrl) && (
                             <button className="ops-btn ops-btn-cyan" onClick={() => setInspectGame(g)}>SANDBOX TEST</button>
                           )}
                           <button
@@ -268,16 +288,25 @@ export function AdminConsole({
               <div className="ops-card" style={{ borderColor: "var(--cyan)" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 10 }}>
                   <span className="font-mono" style={{ color: "var(--cyan)", fontSize: 12 }}>
-                    ISOLATED SANDBOX INSPECTOR: {inspectGame.title} (sandbox=&quot;allow-scripts&quot;)
+                    ISOLATED SANDBOX INSPECTOR: {inspectGame.title} ({inspectGame.sandboxUrl ? inspectGame.sandboxUrl : 'sandbox="allow-scripts"'})
                   </span>
                   <button className="ops-btn" onClick={() => setInspectGame(null)}>CLOSE</button>
                 </div>
-                <iframe
-                  title={inspectGame.title}
-                  sandbox="allow-scripts"
-                  srcDoc={inspectGame.sandboxHtml}
-                  style={{ width: "100%", height: 340, border: "1px solid var(--line-strong)", background: "#000" }}
-                />
+                {inspectGame.sandboxUrl ? (
+                  <iframe
+                    title={inspectGame.title}
+                    sandbox={inspectGame.sandboxUrl.startsWith("https://") ? "allow-scripts allow-same-origin" : "allow-scripts"}
+                    src={inspectGame.sandboxUrl}
+                    style={{ width: "100%", height: 340, border: "1px solid var(--line-strong)", background: "#000" }}
+                  />
+                ) : (
+                  <iframe
+                    title={inspectGame.title}
+                    sandbox="allow-scripts"
+                    srcDoc={inspectGame.sandboxHtml}
+                    style={{ width: "100%", height: 340, border: "1px solid var(--line-strong)", background: "#000" }}
+                  />
+                )}
               </div>
             )}
           </div>
@@ -403,6 +432,31 @@ export function AdminConsole({
               <h1 className="font-display" style={{ margin: 0, fontSize: 24 }}>FINANCE LEDGER (PAYPAL / PAYONEER / CREEM / KO-FI / PATREON)</h1>
               <button className="ops-btn ops-btn-volt" onClick={exportCsv}>EXPORT CSV FOR SETTLEMENT</button>
             </div>
+
+            <div className="ops-card" style={{ display: "grid", gap: 10 }}>
+              <div className="font-mono" style={{ fontSize: 11, color: "var(--volt)" }}>
+                LIVE PAYMENT WEBHOOK ENDPOINTS (PASTE INTO PROVIDER DASHBOARDS)
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 10 }} className="font-mono">
+                {[
+                  { name: "CREEM MoR", live: integrations.creem, url: "https://synthplay.games/api/webhooks/creem" },
+                  { name: "KO-FI", live: integrations.kofi, url: "https://synthplay.games/api/webhooks/kofi" },
+                  { name: "PATREON", live: integrations.patreon, url: "https://synthplay.games/api/webhooks/patreon" },
+                  { name: "PAYPAL BUSINESS", live: integrations.paypal, url: "https://synthplay.games/api/webhooks/paypal" }
+                ].map((wh) => (
+                  <div key={wh.name} style={{ padding: 10, border: "1px solid var(--line)", background: "rgba(255,255,255,0.02)", fontSize: 11 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                      <strong>{wh.name}</strong>
+                      <span style={{ color: wh.live ? "var(--cyan)" : "var(--amber)" }}>
+                        {wh.live ? "SECRET ARMED" : "ADD SECRET IN .ENV"}
+                      </span>
+                    </div>
+                    <div style={{ color: "var(--muted)", wordBreak: "break-all" }}>{wh.url}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
             <div className="ops-card" style={{ padding: 0 }}>
               <table className="ops-table">
                 <thead>
@@ -432,10 +486,12 @@ export function AdminConsole({
           </div>
         )}
 
-        {/* TAB 6: I18N COVERAGE */}
+        {/* TAB 6: I18N COVERAGE & AI AUTO-TRANSLATION */}
         {tab === "i18n" && (
           <div style={{ display: "grid", gap: 18 }}>
-            <h1 className="font-display" style={{ margin: 0, fontSize: 24 }}>MULTI-LANGUAGE COVERAGE (PHASE 1: 4 LOCALES)</h1>
+            <h1 className="font-display" style={{ margin: 0, fontSize: 24 }}>
+              MULTI-LANGUAGE COVERAGE &amp; AI AUTO-TRANSLATION ({integrations.aiTranslate ? `${integrations.aiProvider} LIVE` : "ADD AI_TRANSLATE_API_KEY IN .ENV"})
+            </h1>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 14 }}>
               {SUPPORTED_LOCALES.map((loc) => {
                 const count = Object.keys(DICTIONARY[loc.code]).length;
@@ -443,10 +499,46 @@ export function AdminConsole({
                   <div key={loc.code} className="ops-card">
                     <div className="font-mono" style={{ fontSize: 11, color: "var(--volt)" }}>{loc.code}</div>
                     <div className="font-display" style={{ fontSize: 20, margin: "6px 0" }}>{loc.native}</div>
-                    <div className="font-mono" style={{ fontSize: 12, color: "var(--cyan)" }}>{count} / {count} KEYS (100%)</div>
+                    <div className="font-mono" style={{ fontSize: 12, color: "var(--cyan)" }}>{count} / {count} UI KEYS (100%)</div>
                   </div>
                 );
               })}
+            </div>
+
+            <div className="ops-card" style={{ padding: 0 }}>
+              <table className="ops-table">
+                <thead>
+                  <tr>
+                    <th>GAME</th>
+                    <th>LOCALIZED LOCALES</th>
+                    <th>ACTION</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.games.map((g) => {
+                    const locales = g.translations ? Object.keys(g.translations) : ["en", "zh-CN"];
+                    return (
+                      <tr key={g.id}>
+                        <td>
+                          <div style={{ fontWeight: 700 }}>{g.title}</div>
+                          <div style={{ fontSize: 12, color: "var(--muted)" }}>{g.tagline}</div>
+                        </td>
+                        <td className="font-mono" style={{ fontSize: 11, color: "var(--cyan)" }}>
+                          {locales.join(" · ").toUpperCase()}
+                        </td>
+                        <td>
+                          <button
+                            className="ops-btn ops-btn-volt"
+                            onClick={() => runAction({ action: "AI_TRANSLATE_GAME", gameId: g.id }, `AI translated ${g.title} into EN/ZH/JA/ES!`)}
+                          >
+                            AI TRANSLATE 4 LOCALES
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
           </div>
         )}

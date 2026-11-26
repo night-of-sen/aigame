@@ -59,9 +59,26 @@ export function ArcadeCabinetModal({
     return () => clearInterval(timer);
   }, [game.id, onPlayCounted, playerCountry]);
 
-  // Built-in 60fps HTML5 Arcade Action Canvas (when no custom user sandboxHtml is provided)
+  const [sdkScore, setSdkScore] = useState<number | null>(null);
+
+  // Listen for SynthPlay Game SDK postMessage events (SCORE / OPEN_TIP)
   useEffect(() => {
-    if (game.sandboxHtml) return;
+    const onMessage = (ev: MessageEvent) => {
+      const data = ev.data;
+      if (!data || data.source !== "synthplay-sdk") return;
+      if (data.type === "SCORE" && Number.isFinite(Number(data.score))) {
+        setSdkScore(Number(data.score));
+      } else if (data.type === "OPEN_TIP" && game.creatorTipUrl) {
+        window.open(game.creatorTipUrl, "_blank", "noopener,noreferrer");
+      }
+    };
+    window.addEventListener("message", onMessage);
+    return () => window.removeEventListener("message", onMessage);
+  }, [game.creatorTipUrl]);
+
+  // Built-in 60fps HTML5 Arcade Action Canvas (when no custom user sandboxHtml or sandboxUrl is provided)
+  useEffect(() => {
+    if (game.sandboxHtml || game.sandboxUrl) return;
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
@@ -305,6 +322,9 @@ export function ArcadeCabinetModal({
               <span style={{ color: counted ? "var(--volt)" : "var(--ink-muted)" }}>
                 | HEARTBEAT: {visibleSec}s {counted ? "(VALID PLAY RECORDED)" : "(10s FOR RANK)"}
               </span>
+              {sdkScore !== null && (
+                <span style={{ color: "var(--volt)" }}>| SDK SCORE: {sdkScore.toLocaleString()}</span>
+              )}
             </div>
           </div>
 
@@ -315,12 +335,23 @@ export function ArcadeCabinetModal({
 
         {/* Game Viewport */}
         <div style={{ position: "relative", border: "1px solid var(--hairline-strong)", background: "#050608", overflow: "hidden" }}>
-          {game.sandboxHtml ? (
+          {game.sandboxUrl ? (
+            <iframe
+              title={game.title}
+              sandbox={
+                game.sandboxUrl.startsWith("https://")
+                  ? "allow-scripts allow-pointer-lock allow-same-origin"
+                  : "allow-scripts allow-pointer-lock"
+              }
+              src={game.sandboxUrl}
+              style={{ width: "100%", height: 440, border: 0, display: "block", background: "#07080b" }}
+            />
+          ) : game.sandboxHtml ? (
             <iframe
               title={game.title}
               sandbox="allow-scripts allow-pointer-lock"
               srcDoc={game.sandboxHtml}
-              style={{ width: "100%", height: 420, border: 0, display: "block", background: "#07080b" }}
+              style={{ width: "100%", height: 440, border: 0, display: "block", background: "#07080b" }}
             />
           ) : (
             <>

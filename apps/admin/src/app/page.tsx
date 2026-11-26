@@ -24,12 +24,23 @@ export default async function AdminHomePage() {
   }
 
   const [store, engine] = await Promise.all([loadFullStore(), getStorageEngineInfo()]);
+  const isSet = (v?: string) => Boolean(v && !v.startsWith("your_"));
+  const integrations = {
+    r2: isSet(process.env.R2_ACCOUNT_ID) && isSet(process.env.R2_ACCESS_KEY_ID) && isSet(process.env.R2_SECRET_ACCESS_KEY),
+    creem: isSet(process.env.CREEM_WEBHOOK_SECRET),
+    kofi: isSet(process.env.KOFI_VERIFICATION_TOKEN),
+    patreon: isSet(process.env.PATREON_WEBHOOK_SECRET),
+    paypal: isSet(process.env.PAYPAL_CLIENT_ID) && isSet(process.env.PAYPAL_WEBHOOK_ID),
+    aiTranslate: isSet(process.env.AI_TRANSLATE_API_KEY),
+    aiProvider: (process.env.AI_TRANSLATE_PROVIDER || "gemini").toUpperCase()
+  };
 
   return (
     <AdminConsole
       adminEmail={session.email}
       isDefaultPassword={isDefaultPassword}
       engine={engine}
+      integrations={integrations}
       initial={{
         ...store,
         countryPower: computeCountryPowerRankings(store.games)

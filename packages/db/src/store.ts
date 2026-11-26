@@ -37,6 +37,12 @@ export interface ReviewRecord {
   createdAt: string;
 }
 
+export interface GameTranslationEntry {
+  title: string;
+  tagline: string;
+  aiPromptNote?: string;
+}
+
 export interface GameRecord {
   id: string;
   slug: string;
@@ -44,6 +50,7 @@ export interface GameRecord {
   titleZh: string;
   tagline: string;
   taglineZh: string;
+  translations?: Record<string, GameTranslationEntry>;
   creatorId: string;
   creatorName: string;
   creatorCountryCode: string;
@@ -60,6 +67,7 @@ export interface GameRecord {
   rating: number;
   countryPlays: Record<string, number>;
   sandboxHtml?: string;
+  sandboxUrl?: string;
   securityScore: number;
   securityVerdict: "SAFE" | "REVIEW_REQUIRED" | "BLOCKED";
   creatorTipUrl?: string;
@@ -82,7 +90,9 @@ export interface SponsorSlotRecord {
 
 export interface SponsorOrderRecord {
   id: string;
+  externalRef?: string;
   payerName: string;
+  payerEmail?: string;
   payerCountry: string;
   provider: PaymentProvider;
   tier: "diamond_b2b" | "gold_patron" | "supporter" | "pro_monthly";

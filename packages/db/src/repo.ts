@@ -6,6 +6,7 @@ import {
   writeStore,
   type AuditLogRecord,
   type GameRecord,
+  type GameTranslationEntry,
   type ReviewRecord,
   type SponsorOrderRecord,
   type SponsorSlotRecord,
@@ -105,12 +106,17 @@ async function ensurePgReady(): Promise<boolean> {
           rating DOUBLE PRECISION NOT NULL DEFAULT 4.8,
           country_plays JSONB NOT NULL DEFAULT '{}'::jsonb,
           sandbox_html TEXT,
+          sandbox_url TEXT,
+          translations JSONB NOT NULL DEFAULT '{}'::jsonb,
           security_score INTEGER NOT NULL DEFAULT 95,
           security_verdict TEXT NOT NULL DEFAULT 'SAFE',
           creator_tip_url TEXT,
           published_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
         );
       `;
+
+      await sql`ALTER TABLE sp_games ADD COLUMN IF NOT EXISTS sandbox_url TEXT;`;
+      await sql`ALTER TABLE sp_games ADD COLUMN IF NOT EXISTS translations JSONB NOT NULL DEFAULT '{}'::jsonb;`;
 
       await sql`
         CREATE TABLE IF NOT EXISTS sp_reviews (
@@ -146,7 +152,9 @@ async function ensurePgReady(): Promise<boolean> {
       await sql`
         CREATE TABLE IF NOT EXISTS sp_sponsor_orders (
           id TEXT PRIMARY KEY,
+          external_ref TEXT,
           payer_name TEXT NOT NULL,
+          payer_email TEXT,
           payer_country TEXT NOT NULL DEFAULT 'US',
           provider TEXT NOT NULL,
           tier TEXT NOT NULL,
@@ -155,6 +163,9 @@ async function ensurePgReady(): Promise<boolean> {
           created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
         );
       `;
+
+      await sql`ALTER TABLE sp_sponsor_orders ADD COLUMN IF NOT EXISTS external_ref TEXT;`;
+      await sql`ALTER TABLE sp_sponsor_orders ADD COLUMN IF NOT EXISTS payer_email TEXT;`;
 
       await sql`
         CREATE TABLE IF NOT EXISTS sp_audit_logs (
@@ -310,6 +321,9 @@ export async function loadFullStore(): Promise<SynthPlayStore> {
       titleZh: String(g.title_zh),
       tagline: String(g.tagline),
       taglineZh: String(g.tagline_zh),
+      translations: (g.translations && typeof g.translations === "object"
+        ? g.translations
+        : undefined) as Record<string, GameTranslationEntry> | undefined,
       creatorId: String(g.creator_id),
       creatorName: String(g.creator_name),
       creatorCountryCode: String(g.creator_country_code),
@@ -326,6 +340,7 @@ export async function loadFullStore(): Promise<SynthPlayStore> {
       rating: Number(g.rating || 4.8),
       countryPlays: (g.country_plays || {}) as Record<string, number>,
       sandboxHtml: g.sandbox_html ? String(g.sandbox_html) : undefined,
+      sandboxUrl: g.sandbox_url ? String(g.sandbox_url) : undefined,
       securityScore: Number(g.security_score || 95),
       securityVerdict: (g.security_verdict || "SAFE") as GameRecord["securityVerdict"],
       creatorTipUrl: g.creator_tip_url ? String(g.creator_tip_url) : undefined,
@@ -358,7 +373,9 @@ export async function loadFullStore(): Promise<SynthPlayStore> {
     })),
     sponsorOrders: ordersRows.map((o) => ({
       id: String(o.id),
+      externalRef: o.external_ref ? String(o.external_ref) : undefined,
       payerName: String(o.payer_name),
+      payerEmail: o.payer_email ? String(o.payer_email) : undefined,
       payerCountry: String(o.payer_country),
       provider: o.provider as SponsorOrderRecord["provider"],
       tier: o.tier as SponsorOrderRecord["tier"],
@@ -440,10 +457,44 @@ export async function createGameRecord(game: GameRecord): Promise<GameRecord> {
   }
 
   await sql`
-    INSERT INTO sp_games (id, slug, title, title_zh, tagline, tagline_zh, creator_id, creator_name, creator_country_code, play_type, category, is_ai_created, ai_tools, ai_prompt_note, cover_image, accent_color, status, total_valid_plays, plays_24h, rating, country_plays, sandbox_html, security_score, security_verdict, creator_tip_url, published_at)
-    VALUES (${game.id}, ${game.slug}, ${game.title}, ${game.titleZh}, ${game.tagline}, ${game.taglineZh}, ${game.creatorId}, ${game.creatorName}, ${game.creatorCountryCode}, ${game.playType}, ${game.category}, ${game.isAiCreated}, ${sql.json(game.aiTools)}, ${game.aiPromptNote}, ${game.coverImage}, ${game.accentColor}, ${game.status}, ${game.totalValidPlays}, ${game.plays24h}, ${game.rating}, ${sql.json(game.countryPlays)}, ${game.sandboxHtml ?? null}, ${game.securityScore}, ${game.securityVerdict}, ${game.creatorTipUrl ?? null}, ${game.publishedAt})
+    INSERT INTO sp_games (id, slug, title, title_zh, tagline, tagline_zh, creator_id, creator_name, creator_country_code, play_type, category, is_ai_created, ai_tools, ai_prompt_note, cover_image, accent_color, status, total_valid_plays, plays_24h, rating, country_plays, sandbox_html, sandbox_url, translations, security_score, security_verdict, creator_tip_url, published_at)
+    VALUES (${game.id}, ${game.slug}, ${game.title}, ${game.titleZh}, ${game.tagline}, ${game.taglineZh}, ${game.creatorId}, ${game.creatorName}, ${game.creatorCountryCode}, ${game.playType}, ${game.category}, ${game.isAiCreated}, ${sql.json(game.aiTools)}, ${game.aiPromptNote}, ${game.coverImage}, ${game.accentColor}, ${game.status}, ${game.totalValidPlays}, ${game.plays24h}, ${game.rating}, ${sql.json(game.countryPlays)}, ${game.sandboxHtml ?? null}, ${game.sandboxUrl ?? null}, ${sql.json((game.translations ?? {}) as unknown as postgres.JSONValue)}, ${game.securityScore}, ${game.securityVerdict}, ${game.creatorTipUrl ?? null}, ${game.publishedAt})
   `;
   return game;
+}
+
+export async function updateGameTranslations(
+  gameId: string,
+  translations: Record<string, GameTranslationEntry>
+): Promise<GameRecord | null> {
+  const zh = translations["zh-CN"];
+  const ok = await ensurePgReady();
+  const sql = getSql();
+  if (!ok || !sql) {
+    const store = readStore();
+    const g = store.games.find((x) => x.id === gameId);
+    if (!g) return null;
+    g.translations = { ...(g.translations || {}), ...translations };
+    if (zh?.title) g.titleZh = zh.title;
+    if (zh?.tagline) g.taglineZh = zh.tagline;
+    writeStore(store);
+    return g;
+  }
+
+  const store = await loadFullStore();
+  const g = store.games.find((x) => x.id === gameId);
+  if (!g) return null;
+  const merged = { ...(g.translations || {}), ...translations };
+  const nextTitleZh = zh?.title || g.titleZh;
+  const nextTaglineZh = zh?.tagline || g.taglineZh;
+  await sql`
+    UPDATE sp_games
+    SET translations = ${sql.json(merged as unknown as postgres.JSONValue)},
+        title_zh = ${nextTitleZh},
+        tagline_zh = ${nextTaglineZh}
+    WHERE id = ${gameId}
+  `;
+  return { ...g, translations: merged, titleZh: nextTitleZh, taglineZh: nextTaglineZh };
 }
 
 export async function updateGameStatus(gameId: string, status: GameRecord["status"]): Promise<GameRecord | null> {
@@ -525,21 +576,43 @@ export async function addReviewRecord(review: ReviewRecord): Promise<ReviewRecor
 export async function createSponsorOrderAndSlot(
   order: SponsorOrderRecord,
   slot?: SponsorSlotRecord
-): Promise<{ raisedUsd: number }> {
+): Promise<{ raisedUsd: number; duplicate?: boolean; upgradedUserId?: string }> {
   const ok = await ensurePgReady();
   const sql = getSql();
   if (!ok || !sql) {
     const store = readStore();
+    if (order.externalRef && store.sponsorOrders.some((o) => o.externalRef === order.externalRef)) {
+      return { raisedUsd: store.monthlyFundingRaisedUsd, duplicate: true };
+    }
     store.sponsorOrders.unshift(order);
     store.monthlyFundingRaisedUsd += order.amountUsd;
     if (slot) store.sponsorSlots.unshift(slot);
+    let upgradedUserId: string | undefined;
+    if (order.payerEmail) {
+      const targetEmail = order.payerEmail.toLowerCase();
+      const user = store.users.find((u) => u.email.toLowerCase() === targetEmail);
+      if (user) {
+        user.isProSupporter = true;
+        upgradedUserId = user.id;
+      }
+    }
     writeStore(store);
-    return { raisedUsd: store.monthlyFundingRaisedUsd };
+    return { raisedUsd: store.monthlyFundingRaisedUsd, upgradedUserId };
+  }
+
+  if (order.externalRef) {
+    const existing = await sql<{ id: string }[]>`
+      SELECT id FROM sp_sponsor_orders WHERE external_ref = ${order.externalRef} LIMIT 1
+    `;
+    if (existing.length > 0) {
+      const rows = await sql<{ value_int: number }[]>`SELECT value_int FROM sp_meta WHERE key = 'monthly_raised_usd'`;
+      return { raisedUsd: Number(rows[0]?.value_int || 394), duplicate: true };
+    }
   }
 
   await sql`
-    INSERT INTO sp_sponsor_orders (id, payer_name, payer_country, provider, tier, amount_usd, status, created_at)
-    VALUES (${order.id}, ${order.payerName}, ${order.payerCountry}, ${order.provider}, ${order.tier}, ${order.amountUsd}, ${order.status}, ${order.createdAt})
+    INSERT INTO sp_sponsor_orders (id, external_ref, payer_name, payer_email, payer_country, provider, tier, amount_usd, status, created_at)
+    VALUES (${order.id}, ${order.externalRef ?? null}, ${order.payerName}, ${order.payerEmail ?? null}, ${order.payerCountry}, ${order.provider}, ${order.tier}, ${order.amountUsd}, ${order.status}, ${order.createdAt})
   `;
   if (slot) {
     await sql`
@@ -547,9 +620,19 @@ export async function createSponsorOrderAndSlot(
       VALUES (${slot.id}, ${slot.placement}, ${slot.brandName}, ${slot.tagline}, ${slot.badgeLabel}, ${slot.targetUrl}, ${slot.countryCode}, ${slot.provider}, ${slot.monthlyUsd}, ${slot.isActive}, ${slot.clickCount})
     `;
   }
+  let upgradedUserId: string | undefined;
+  if (order.payerEmail) {
+    const upgraded = await sql<{ id: string }[]>`
+      UPDATE sp_users
+      SET is_pro_supporter = TRUE
+      WHERE LOWER(email) = LOWER(${order.payerEmail})
+      RETURNING id
+    `;
+    upgradedUserId = upgraded[0]?.id ? String(upgraded[0].id) : undefined;
+  }
   await sql`UPDATE sp_meta SET value_int = value_int + ${order.amountUsd} WHERE key = 'monthly_raised_usd'`;
   const rows = await sql<{ value_int: number }[]>`SELECT value_int FROM sp_meta WHERE key = 'monthly_raised_usd'`;
-  return { raisedUsd: Number(rows[0]?.value_int || 394) };
+  return { raisedUsd: Number(rows[0]?.value_int || 394), upgradedUserId };
 }
 
 export async function toggleSponsorSlotRecord(slotId: string): Promise<SponsorSlotRecord | null> {

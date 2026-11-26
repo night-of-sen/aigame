@@ -1,0 +1,16 @@
+name = "synthplay-sandbox-proxy"
+main = "src/index.ts"
+compatibility_date = "2026-01-01"
+
+# Bind your Cloudflare R2 production bucket (`synthplay-games-prod`)
+[[r2_buckets]]
+binding = "GAMES_PROD"
+bucket_name = "synthplay-games-prod"
+
+# Deploy routes for isolated wildcard game subdomains + CDN path
+routes = [
+  { pattern = "*.synthplay-box.cloud/*", zone_name = "synthplay-box.cloud" }
+]
+
+[vars]
+ALLOWED_PARENT_ORIGINS = "https://synthplay.games https://www.synthplay.games https://admin.synthplay.games"

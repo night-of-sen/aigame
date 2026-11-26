@@ -9,6 +9,7 @@ import {
   type PlayType
 } from "@synthplay/db";
 import { scanHtmlSubmission, wrapSingleHtmlForSandbox } from "@synthplay/sandbox-security";
+import { translateGameMetadata } from "@/lib/aiTranslate";
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -101,14 +102,20 @@ export async function POST(req: NextRequest) {
     const accentColor = accentPalette[store.games.length % accentPalette.length];
 
     const wrappedHtml = rawHtml ? wrapSingleHtmlForSandbox(rawHtml, id) : undefined;
+    const i18nRes = await translateGameMetadata({
+      title: title.toUpperCase(),
+      tagline,
+      aiPromptNote
+    });
 
     const newGame: GameRecord = {
       id,
       slug,
-      title: title.toUpperCase(),
-      titleZh,
-      tagline,
-      taglineZh,
+      title: i18nRes.translations.en?.title || title.toUpperCase(),
+      titleZh: i18nRes.translations["zh-CN"]?.title || titleZh,
+      tagline: i18nRes.translations.en?.tagline || tagline,
+      taglineZh: i18nRes.translations["zh-CN"]?.tagline || taglineZh,
+      translations: i18nRes.translations,
       creatorId: session?.sub || "usr-002",
       creatorName,
       creatorCountryCode,
@@ -137,11 +144,11 @@ export async function POST(req: NextRequest) {
       actor: creatorName,
       action: "GAME_UPLOADED",
       target: `${id} (${newGame.title})`,
-      detail: `PlayType: ${playType}, Security: ${scanReport.verdict} (${scanReport.score}/100)`,
+      detail: `PlayType: ${playType}, Security: ${scanReport.verdict} (${scanReport.score}/100), AI Translate: ${i18nRes.translated ? i18nRes.provider : "standby"}`,
       createdAt: new Date().toISOString()
     });
 
-    return NextResponse.json({ game: newGame, scanReport }, { status: 201 });
+    return NextResponse.json({ game: newGame, scanReport, translated: i18nRes.translated }, { status: 201 });
   } catch {
     return NextResponse.json({ error: "Invalid upload payload." }, { status: 400 });
   }

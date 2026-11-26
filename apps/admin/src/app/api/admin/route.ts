@@ -6,9 +6,11 @@ import {
   loadFullStore,
   toggleSponsorSlotRecord,
   updateGameStatus,
+  updateGameTranslations,
   updateUserRecord,
   verifySessionToken,
   type GameStatus,
+  type GameTranslationEntry,
   type UserStatus
 } from "@synthplay/db";
 
@@ -90,6 +92,81 @@ export async function POST(req: NextRequest) {
       });
       const store = await loadFullStore();
       return NextResponse.json({ ok: true, store });
+    }
+
+    if (action === "AI_TRANSLATE_GAME") {
+      const gameId = String(body.gameId || "");
+      const store = await loadFullStore();
+      const game = store.games.find((g) => g.id === gameId);
+      if (!game) return NextResponse.json({ error: "Game not found" }, { status: 404 });
+
+      const apiKey = process.env.AI_TRANSLATE_API_KEY || "";
+      if (!apiKey || apiKey.startsWith("your_")) {
+        return NextResponse.json({ error: "AI_TRANSLATE_API_KEY is not configured in .env yet." }, { status: 400 });
+      }
+
+      const provider = (process.env.AI_TRANSLATE_PROVIDER || "gemini").toLowerCase();
+      const prompt = [
+        "Translate this indie arcade game metadata into en, zh-CN, ja, es.",
+        'Return ONLY valid JSON with keys "en", "zh-CN", "ja", "es", each {"title": string, "tagline": string}.',
+        `Title: ${game.title}`,
+        `Tagline: ${game.tagline}`
+      ].join("\n");
+
+      let rawText = "";
+      if (provider === "gemini") {
+        const model = process.env.AI_TRANSLATE_MODEL || "gemini-2.0-flash";
+        const res = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              contents: [{ parts: [{ text: prompt }] }],
+              generationConfig: { temperature: 0.2, responseMimeType: "application/json" }
+            })
+          }
+        );
+        if (res.ok) {
+          const data = await res.json();
+          rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
+        }
+      } else {
+        const endpoint =
+          provider === "deepseek"
+            ? "https://api.deepseek.com/chat/completions"
+            : "https://api.openai.com/v1/chat/completions";
+        const model = process.env.AI_TRANSLATE_MODEL || (provider === "deepseek" ? "deepseek-chat" : "gpt-4o-mini");
+        const res = await fetch(endpoint, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+          body: JSON.stringify({
+            model,
+            temperature: 0.2,
+            response_format: { type: "json_object" },
+            messages: [{ role: "user", content: prompt }]
+          })
+        });
+        if (res.ok) {
+          const data = await res.json();
+          rawText = data?.choices?.[0]?.message?.content || "";
+        }
+      }
+
+      const cleaned = rawText.trim().replace(/^```json\s*/i, "").replace(/^```\s*/i, "").replace(/```$/i, "").trim();
+      const parsed = JSON.parse(cleaned) as Record<string, GameTranslationEntry>;
+      await updateGameTranslations(game.id, parsed);
+      await appendAuditLog({
+        id: `aud-${Date.now().toString(36)}`,
+        actor: session.email,
+        action: "AI_TRANSLATED_GAME",
+        target: `${game.id} (${game.title})`,
+        detail: `Translated via ${provider.toUpperCase()} into ${Object.keys(parsed).join(", ")}`,
+        createdAt: new Date().toISOString()
+      });
+
+      const nextStore = await loadFullStore();
+      return NextResponse.json({ ok: true, store: nextStore });
     }
 
     return NextResponse.json({ error: "Unsupported admin action" }, { status: 400 });
