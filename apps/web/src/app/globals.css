@@ -11,6 +11,9 @@
 }
 
 :root {
+  --font-display: "Chakra Petch";
+  --font-mono: "JetBrains Mono";
+  --font-sans: "Space Grotesk";
   --bg-void: #06070a;
   --bg-cabinet: #0d1017;
   --bg-panel: #131722;

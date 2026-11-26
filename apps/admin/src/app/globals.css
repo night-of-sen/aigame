@@ -1,4 +1,7 @@
 :root {
+  --font-display: "Chakra Petch";
+  --font-mono: "JetBrains Mono";
+  --font-sans: "Space Grotesk";
   --bg: #090b10;
   --panel: #10131b;
   --panel-alt: #161a25;
