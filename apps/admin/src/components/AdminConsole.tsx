@@ -8,12 +8,27 @@ interface AdminData extends SynthPlayStore {
   countryPower: Array<{ countryCode: string; totalPlays: number; gameCount: number; avgRating: number }>;
 }
 
-export function AdminConsole({ initial }: { initial: AdminData }) {
+export function AdminConsole({
+  initial,
+  adminEmail,
+  isDefaultPassword,
+  engine
+}: {
+  initial: AdminData;
+  adminEmail: string;
+  isDefaultPassword: boolean;
+  engine: { pg: boolean; redis: boolean };
+}) {
   const [data, setData] = useState<AdminData>(initial);
   const [tab, setTab] = useState<"overview" | "games" | "users" | "sponsors" | "finance" | "i18n">("overview");
   const [userSearch, setUserSearch] = useState("");
   const [inspectGame, setInspectGame] = useState<GameRecord | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+
+  const handleLogout = async () => {
+    await fetch("/api/auth/logout", { method: "POST" });
+    window.location.reload();
+  };
 
   const runAction = async (payload: Record<string, unknown>, message: string) => {
     const res = await fetch("/api/admin", {
@@ -21,6 +36,10 @@ export function AdminConsole({ initial }: { initial: AdminData }) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload)
     });
+    if (res.status === 401) {
+      window.location.reload();
+      return;
+    }
     if (res.ok) {
       const updated = await res.json();
       setData((prev) => ({ ...prev, ...updated.store }));
@@ -61,12 +80,20 @@ export function AdminConsole({ initial }: { initial: AdminData }) {
     <div className="ops-shell">
       {/* Left Sidebar */}
       <aside className="ops-sidebar">
-        <div style={{ padding: "4px 8px 18px", borderBottom: "1px solid var(--line)", marginBottom: 10 }}>
+        <div style={{ padding: "4px 8px 14px", borderBottom: "1px solid var(--line)", marginBottom: 10 }}>
           <div className="font-display" style={{ fontSize: 18, fontWeight: 700, color: "var(--volt)" }}>
             SYNTHPLAY OPS
           </div>
           <div className="font-mono" style={{ fontSize: 10, color: "var(--muted)", marginTop: 4 }}>
             ADMIN.SYNTHPLAY.GAMES // RBAC
+          </div>
+          <div className="font-mono" style={{ fontSize: 10, marginTop: 8, display: "flex", gap: 6, flexWrap: "wrap" }}>
+            <span style={{ padding: "2px 6px", border: `1px solid ${engine.pg ? "var(--cyan)" : "var(--amber)"}`, color: engine.pg ? "var(--cyan)" : "var(--amber)" }}>
+              {engine.pg ? "PG 16 LIVE" : "JSON DEV"}
+            </span>
+            <span style={{ padding: "2px 6px", border: `1px solid ${engine.redis ? "var(--volt)" : "var(--line-strong)"}`, color: engine.redis ? "var(--volt)" : "var(--muted)" }}>
+              {engine.redis ? "REDIS 7 LIVE" : "REDIS OFF"}
+            </span>
           </div>
         </div>
 
@@ -97,7 +124,10 @@ export function AdminConsole({ initial }: { initial: AdminData }) {
           <span>4</span>
         </button>
 
-        <div style={{ marginTop: "auto", paddingTop: 16, borderTop: "1px solid var(--line)" }}>
+        <div style={{ marginTop: "auto", paddingTop: 16, borderTop: "1px solid var(--line)", display: "grid", gap: 8 }}>
+          <div className="font-mono" style={{ fontSize: 10, color: "var(--muted)", overflow: "hidden", textOverflow: "ellipsis" }}>
+            SIGNED IN: {adminEmail}
+          </div>
           <a
             href={process.env.NEXT_PUBLIC_MAIN_DOMAIN || "http://localhost:3000"}
             target="_blank"
@@ -107,11 +137,19 @@ export function AdminConsole({ initial }: { initial: AdminData }) {
           >
             OPEN STOREFRONT ↗
           </a>
+          <button className="ops-btn ops-btn-red" onClick={handleLogout}>
+            SIGN OUT OPS
+          </button>
         </div>
       </aside>
 
       {/* Main Content */}
       <main className="ops-main">
+        {isDefaultPassword && (
+          <div className="font-mono" style={{ marginBottom: 16, padding: "10px 14px", border: "1px solid rgba(255,159,28,0.5)", background: "rgba(255,159,28,0.1)", color: "var(--amber)", fontSize: 12 }}>
+            SECURITY ALERT: Update <strong>ADMIN_PASSWORD</strong> &amp; <strong>AUTH_SECRET</strong> in <code>/opt/synthplay/.env</code> and run <code>docker compose up -d</code>!
+          </div>
+        )}
         {toast && (
           <div className="font-mono" style={{ marginBottom: 16, padding: "10px 14px", border: "1px solid var(--cyan)", background: "rgba(0,240,212,0.1)", color: "var(--cyan)", fontSize: 12 }}>
             {toast}

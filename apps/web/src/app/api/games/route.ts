@@ -1,5 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { readStore, writeStore, type GameRecord, type PlayType } from "@synthplay/db";
+import {
+  USER_SESSION_COOKIE,
+  appendAuditLog,
+  createGameRecord,
+  loadFullStore,
+  verifySessionToken,
+  type GameRecord,
+  type PlayType
+} from "@synthplay/db";
 import { scanHtmlSubmission, wrapSingleHtmlForSandbox } from "@synthplay/sandbox-security";
 
 export async function GET(req: NextRequest) {
@@ -8,7 +16,7 @@ export async function GET(req: NextRequest) {
   const filter = searchParams.get("filter") || "ALL";
   const includeAll = searchParams.get("all") === "1";
 
-  const store = readStore();
+  const store = await loadFullStore();
   let list = includeAll
     ? store.games
     : store.games.filter((g) => g.status === "published");
@@ -35,13 +43,14 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
+    const session = verifySessionToken(req.cookies.get(USER_SESSION_COOKIE)?.value);
     const body = await req.json();
     const title = String(body.title || "").trim();
     const titleZh = String(body.titleZh || title).trim();
     const tagline = String(body.tagline || "Free playable community AI game.").trim();
     const taglineZh = String(body.taglineZh || tagline).trim();
-    const creatorName = String(body.creatorName || "IndieCreator").trim();
-    const creatorCountryCode = String(body.creatorCountryCode || "CN").toUpperCase().slice(0, 4);
+    const creatorName = session?.username || String(body.creatorName || "IndieCreator").trim();
+    const creatorCountryCode = (session?.countryCode || String(body.creatorCountryCode || "CN")).toUpperCase().slice(0, 4);
     const playType: PlayType = body.playType === "html5_zip" ? "html5_zip" : "single_html";
     const category = String(body.category || "ARCADE").toUpperCase();
     const aiTools = Array.isArray(body.aiTools) ? body.aiTools.map(String) : ["AI Assisted"];
@@ -54,7 +63,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Game title is required." }, { status: 400 });
     }
 
-    // Run real static security scan
     const scanReport = rawHtml
       ? scanHtmlSubmission(rawHtml)
       : {
@@ -76,7 +84,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const store = readStore();
+    const store = await loadFullStore();
     const id = `gm-${Date.now().toString(36)}`;
     const slug = `${title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "game"}-${id.slice(-4)}`;
 
@@ -101,7 +109,7 @@ export async function POST(req: NextRequest) {
       titleZh,
       tagline,
       taglineZh,
-      creatorId: "usr-002",
+      creatorId: session?.sub || "usr-002",
       creatorName,
       creatorCountryCode,
       playType,
@@ -123,8 +131,8 @@ export async function POST(req: NextRequest) {
       publishedAt: new Date().toISOString()
     };
 
-    store.games.unshift(newGame);
-    store.auditLogs.unshift({
+    await createGameRecord(newGame);
+    await appendAuditLog({
       id: `aud-${Date.now().toString(36)}`,
       actor: creatorName,
       action: "GAME_UPLOADED",
@@ -132,7 +140,6 @@ export async function POST(req: NextRequest) {
       detail: `PlayType: ${playType}, Security: ${scanReport.verdict} (${scanReport.score}/100)`,
       createdAt: new Date().toISOString()
     });
-    writeStore(store);
 
     return NextResponse.json({ game: newGame, scanReport }, { status: 201 });
   } catch {

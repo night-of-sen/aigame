@@ -1,13 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { readStore, computeCountryPowerRankings } from "@synthplay/db";
+import { computeCountryPowerRankings, loadFullStore } from "@synthplay/db";
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const country = searchParams.get("country") || "ALL";
-  const store = readStore();
+  const store = await loadFullStore();
   const published = store.games.filter((g) => g.status === "published");
 
-  // 1. Global Play Ranking (or Country-Specific Player Hotlist)
   const topPlayed = [...published]
     .sort((a, b) => {
       if (country !== "ALL") {
@@ -17,10 +16,8 @@ export async function GET(req: NextRequest) {
     })
     .slice(0, 10);
 
-  // 2. Country Creator Power Ranking
   const countryPower = computeCountryPowerRankings(published);
 
-  // 3. AI Native Innovation Ranking (weighted by rating + 24h momentum)
   const aiNative = [...published]
     .filter((g) => g.isAiCreated)
     .sort((a, b) => b.plays24h * b.rating - a.plays24h * a.rating)

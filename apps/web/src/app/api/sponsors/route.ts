@@ -1,8 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
-import { readStore, writeStore, type PaymentProvider, type SponsorPlacement } from "@synthplay/db";
+import {
+  appendAuditLog,
+  createSponsorOrderAndSlot,
+  loadFullStore,
+  type PaymentProvider,
+  type SponsorPlacement
+} from "@synthplay/db";
 
 export async function GET() {
-  const store = readStore();
+  const store = await loadFullStore();
   return NextResponse.json({
     slots: store.sponsorSlots.filter((s) => s.isActive),
     orders: store.sponsorOrders.slice(0, 20),
@@ -26,38 +32,37 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Sponsor / brand name is required." }, { status: 400 });
     }
 
-    const store = readStore();
     const orderId = `ord-${Date.now().toString(36)}`;
-    store.sponsorOrders.unshift({
+    const order = {
       id: orderId,
       payerName,
       payerCountry,
       provider,
       tier,
       amountUsd,
-      status: "paid",
+      status: "paid" as const,
       createdAt: new Date().toISOString()
-    });
-    store.monthlyFundingRaisedUsd += amountUsd;
+    };
 
-    if (tier === "diamond_b2b" || tier === "gold_patron") {
-      const placement: SponsorPlacement = tier === "diamond_b2b" ? "hall_diamond" : "hall_gold";
-      store.sponsorSlots.unshift({
-        id: `sp-${Date.now().toString(36)}`,
-        placement,
-        brandName: payerName.toUpperCase(),
-        tagline,
-        badgeLabel: tier === "diamond_b2b" ? "DIAMOND B2B" : "GOLD PATRON",
-        targetUrl,
-        countryCode: payerCountry,
-        provider,
-        monthlyUsd: amountUsd,
-        isActive: true,
-        clickCount: 0
-      });
-    }
+    const slot =
+      tier === "diamond_b2b" || tier === "gold_patron"
+        ? {
+            id: `sp-${Date.now().toString(36)}`,
+            placement: (tier === "diamond_b2b" ? "hall_diamond" : "hall_gold") as SponsorPlacement,
+            brandName: payerName.toUpperCase(),
+            tagline,
+            badgeLabel: tier === "diamond_b2b" ? "DIAMOND B2B" : "GOLD PATRON",
+            targetUrl,
+            countryCode: payerCountry,
+            provider,
+            monthlyUsd: amountUsd,
+            isActive: true,
+            clickCount: 0
+          }
+        : undefined;
 
-    store.auditLogs.unshift({
+    const { raisedUsd } = await createSponsorOrderAndSlot(order, slot);
+    await appendAuditLog({
       id: `aud-${Date.now().toString(36)}`,
       actor: payerName,
       action: "SPONSOR_ORDER_CREATED",
@@ -66,13 +71,14 @@ export async function POST(req: NextRequest) {
       createdAt: new Date().toISOString()
     });
 
-    writeStore(store);
-
-    return NextResponse.json({
-      ok: true,
-      orderId,
-      monthlyFundingRaisedUsd: store.monthlyFundingRaisedUsd
-    }, { status: 201 });
+    return NextResponse.json(
+      {
+        ok: true,
+        orderId,
+        monthlyFundingRaisedUsd: raisedUsd
+      },
+      { status: 201 }
+    );
   } catch {
     return NextResponse.json({ error: "Invalid sponsorship payload." }, { status: 400 });
   }

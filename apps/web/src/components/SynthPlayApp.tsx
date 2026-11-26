@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
 import type { GameRecord, SponsorSlotRecord } from "@synthplay/db";
 import { COUNTRIES, SUPPORTED_LOCALES, getCountryName, type Locale, t } from "@synthplay/i18n";
 import { arcadeAudio } from "@/lib/arcadeAudio";
@@ -12,6 +13,7 @@ import { DashboardView } from "./DashboardView";
 import { SponsorView } from "./SponsorView";
 import { CyberBootLoader, CyberPageShutter } from "./CyberBootLoader";
 import { GameCardLivePreview } from "./GameCardLivePreview";
+import { AuthModal, type AuthUserSummary } from "./AuthModal";
 import { IconCpu, IconGlobe, IconPlay, IconSpark, IconTrophy, IconUpload, IconVolume } from "./Icons";
 
 interface CountryRankItem {
@@ -29,6 +31,7 @@ interface InitialData {
   sponsorSlots: SponsorSlotRecord[];
   monthlyFundingGoalUsd: number;
   monthlyFundingRaisedUsd: number;
+  currentUser: AuthUserSummary | null;
 }
 
 const LIVE_PULSE_FEED = [
@@ -47,6 +50,9 @@ export function SynthPlayApp({ initial }: { initial: InitialData }) {
   const [quality, setQuality] = useState<"ultra" | "balanced" | "lite">("ultra");
   const [sfxOn, setSfxOn] = useState(false);
   const [fps, setFps] = useState(60);
+
+  const [currentUser, setCurrentUser] = useState<AuthUserSummary | null>(initial.currentUser);
+  const [authModalOpen, setAuthModalOpen] = useState(false);
 
   const [games, setGames] = useState<GameRecord[]>(initial.games);
   const [topPlayed, setTopPlayed] = useState<GameRecord[]>(initial.topPlayed);
@@ -328,6 +334,39 @@ export function SynthPlayApp({ initial }: { initial: InitialData }) {
               <IconCpu size={13} />
               <span>{activeGame ? "BG PAUSED" : `${fps} FPS`}</span>
             </div>
+
+            {currentUser ? (
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <button
+                  type="button"
+                  className="btn-steel font-mono"
+                  style={{ padding: "6px 10px", fontSize: 11, borderColor: "rgba(243,255,0,0.45)", color: "var(--volt)" }}
+                  onClick={() => navigateView("dashboard", "CREATOR STUDIO")}
+                >
+                  <span>@{currentUser.username} [{currentUser.countryCode}]</span>
+                </button>
+                <button
+                  type="button"
+                  className="btn-steel font-mono"
+                  style={{ padding: "6px 8px", fontSize: 10 }}
+                  onClick={async () => {
+                    await fetch("/api/auth/logout", { method: "POST" });
+                    setCurrentUser(null);
+                  }}
+                >
+                  <span>EXIT</span>
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                className="btn-volt"
+                style={{ padding: "7px 14px", fontSize: 11 }}
+                onClick={() => setAuthModalOpen(true)}
+              >
+                <span>{locale === "zh-CN" ? "登录 / 注册" : "SIGN IN"}</span>
+              </button>
+            )}
           </div>
         </div>
       </header>
@@ -650,15 +689,24 @@ export function SynthPlayApp({ initial }: { initial: InitialData }) {
                             {locale === "zh-CN" ? g.taglineZh : g.tagline}
                           </p>
 
-                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: 10, borderTop: "1px solid var(--hairline)", fontSize: 11 }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: 10, borderTop: "1px solid var(--hairline)", fontSize: 11, gap: 8 }}>
                             <div className="font-mono" style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                               {g.aiTools.slice(0, 2).map((tool) => (
                                 <span key={tool} style={{ color: "var(--ink-muted)" }}>#{tool}</span>
                               ))}
                             </div>
-                            <span className="font-mono" style={{ color: "#fff", fontWeight: 700 }}>
-                              {g.totalValidPlays.toLocaleString()} PLAYS
-                            </span>
+                            <div className="font-mono" style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
+                              <Link
+                                href={`/games/${g.slug}`}
+                                onClick={(e) => e.stopPropagation()}
+                                style={{ color: "var(--cyan)", textDecoration: "underline" }}
+                              >
+                                {locale === "zh-CN" ? "详情/评价" : "REVIEWS"}
+                              </Link>
+                              <span style={{ color: "#fff", fontWeight: 700 }}>
+                                {g.totalValidPlays.toLocaleString()}
+                              </span>
+                            </div>
                           </div>
                         </div>
                       </article>
@@ -872,6 +920,14 @@ export function SynthPlayApp({ initial }: { initial: InitialData }) {
             refreshData(country);
           }}
           onOpenSponsor={() => navigateView("sponsor", "SPONSOR HUB")}
+        />
+      )}
+
+      {/* Auth Modal */}
+      {authModalOpen && (
+        <AuthModal
+          onClose={() => setAuthModalOpen(false)}
+          onSuccess={(u) => setCurrentUser(u)}
         />
       )}
 

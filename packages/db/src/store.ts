@@ -12,6 +12,7 @@ export interface UserRecord {
   id: string;
   username: string;
   email: string;
+  passwordHash?: string;
   role: UserRole;
   countryCode: string;
   locale: string;
@@ -20,6 +21,19 @@ export interface UserRecord {
   status: UserStatus;
   creatorTipLinks: { kofi?: string; patreon?: string; paypalMe?: string };
   totalPlaysEarned: number;
+  createdAt: string;
+}
+
+export interface ReviewRecord {
+  id: string;
+  gameId: string;
+  authorName: string;
+  authorCountry: string;
+  rating: number;
+  gameplayScore: number;
+  visualScore: number;
+  aiScore: number;
+  comment: string;
   createdAt: string;
 }
 
@@ -89,6 +103,7 @@ export interface AuditLogRecord {
 export interface SynthPlayStore {
   users: UserRecord[];
   games: GameRecord[];
+  reviews: ReviewRecord[];
   sponsorSlots: SponsorSlotRecord[];
   sponsorOrders: SponsorOrderRecord[];
   auditLogs: AuditLogRecord[];
@@ -494,6 +509,32 @@ const DEFAULT_STORE: SynthPlayStore = {
       createdAt: "2026-11-24T11:30:00Z"
     }
   ],
+  reviews: [
+    {
+      id: "rev-001",
+      gameId: "gm-001",
+      authorName: "SoraDev_Tokyo",
+      authorCountry: "JP",
+      rating: 5,
+      gameplayScore: 5,
+      visualScore: 5,
+      aiScore: 5,
+      comment: "The wet-asphalt reflection shader + adaptive AI ghost line feels like a genuine Sega arcade cabinet in Chrome.",
+      createdAt: "2026-11-18T11:20:00Z"
+    },
+    {
+      id: "rev-002",
+      gameId: "gm-003",
+      authorName: "VibePilot",
+      authorCountry: "US",
+      rating: 5,
+      gameplayScore: 5,
+      visualScore: 5,
+      aiScore: 5,
+      comment: "Insane that this entire cyber-noir AI detective mystery runs in a single HTML file with zero loading screens.",
+      createdAt: "2026-11-21T08:15:00Z"
+    }
+  ],
   auditLogs: [
     {
       id: "aud-01",
@@ -515,7 +556,6 @@ const DEFAULT_STORE: SynthPlayStore = {
 };
 
 function getStorePath(): string {
-  // Share a single store file across apps/web and apps/admin in local/monorepo mode
   const explicit = process.env.SYNTHPLAY_STORE_PATH;
   if (explicit) return explicit;
   const cwd = process.cwd();
@@ -523,6 +563,10 @@ function getStorePath(): string {
     ? path.resolve(cwd, "..", "..")
     : cwd;
   return path.join(root, "data", "synthplay-store.json");
+}
+
+export function getDefaultStoreSnapshot(): SynthPlayStore {
+  return structuredClone(DEFAULT_STORE);
 }
 
 export function readStore(): SynthPlayStore {
@@ -534,7 +578,9 @@ export function readStore(): SynthPlayStore {
       return structuredClone(DEFAULT_STORE);
     }
     const raw = fs.readFileSync(filePath, "utf-8");
-    return JSON.parse(raw) as SynthPlayStore;
+    const parsed = JSON.parse(raw) as SynthPlayStore;
+    if (!Array.isArray(parsed.reviews)) parsed.reviews = structuredClone(DEFAULT_STORE.reviews);
+    return parsed;
   } catch {
     return structuredClone(DEFAULT_STORE);
   }
