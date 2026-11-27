@@ -58,24 +58,55 @@ export function GameDetailClient({
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const canonicalUrl = `https://synthplay.games/games/${game.slug}`;
+  const shareText = `Play ${game.title} free in your browser on SYNTHPLAY (${game.category}) — zero downloads!`;
+  const xShareHref = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(canonicalUrl)}`;
+  const redditShareHref = `https://www.reddit.com/submit?url=${encodeURIComponent(canonicalUrl)}&title=${encodeURIComponent(`${game.title} — Free AI/HTML5 Browser Game on SYNTHPLAY`)}`;
+
   return (
     <div style={{ minHeight: "100vh", background: "var(--bg-void)", color: "var(--ink)" }}>
       <header className="sp-header">
         <div className="sp-header-inner">
           <Link href="/" className="sp-brand">
-            <div className="sp-logo-mark">SP</div>
+            <div className="sp-logo-mark">
+              <img
+                src="/brand-logo.png"
+                alt="SYNTHPLAY"
+                width={40}
+                height={40}
+                style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+              />
+            </div>
             <div>
               <div className="font-display" style={{ fontSize: 18, fontWeight: 700 }}>SYNTHPLAY</div>
-              <div className="font-mono" style={{ fontSize: 10, color: "var(--volt)" }}>← BACK TO ARCADE HALL</div>
+              <div className="font-mono sp-brand-sub">← BACK TO ARCADE HALL</div>
             </div>
           </Link>
-          <div style={{ display: "flex", gap: 10 }}>
-            <button type="button" className="btn-steel" style={{ padding: "8px 14px", fontSize: 11 }} onClick={shareUrl}>
-              <span>{copied ? "COPIED URL!" : "SHARE GAME LINK"}</span>
+          <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 8 }}>
+            <a
+              href={xShareHref}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn-steel sp-ctrl-pill sp-tablet-up-ctrl font-mono"
+              style={{ textDecoration: "none" }}
+            >
+              <span>POST ON X ↗</span>
+            </a>
+            <a
+              href={redditShareHref}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn-steel sp-ctrl-pill sp-tablet-up-ctrl font-mono"
+              style={{ textDecoration: "none" }}
+            >
+              <span>REDDIT ↗</span>
+            </a>
+            <button type="button" className="btn-steel sp-ctrl-pill font-mono" onClick={shareUrl}>
+              <span>{copied ? "COPIED!" : "COPY LINK"}</span>
             </button>
-            <button type="button" className="btn-volt" style={{ padding: "8px 18px", fontSize: 12 }} onClick={() => setPlaying(true)}>
+            <button type="button" className="btn-volt sp-signin-btn" onClick={() => setPlaying(true)}>
               <IconPlay size={14} />
-              <span>PLAY FREE NOW</span>
+              <span>PLAY FREE</span>
             </button>
           </div>
         </div>

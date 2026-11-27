@@ -1080,6 +1080,51 @@ export function SynthPlayApp({ initial }: { initial: InitialData }) {
                 </div>
               </div>
             </section>
+
+            {/* AIO / SEO VISIBLE PLATFORM FAQ (Matches FAQPage JSON-LD for Google AI Overviews, Perplexity & ChatGPT) */}
+            <section style={{ marginTop: 64 }} aria-labelledby="faq-heading">
+              <div className="section-bar">
+                <div>
+                  <div className="section-index">03 // PLATFORM GUIDE &amp; AI CREATOR FAQ</div>
+                  <h2 id="faq-heading" className="section-heading">
+                    {locale === "zh-CN" ? "关于 SYNTHPLAY 与免费托管常见问题" : "FREQUENTLY ASKED QUESTIONS"}
+                  </h2>
+                </div>
+                <a href="/llms.txt" className="btn-steel font-mono" style={{ padding: "8px 14px", fontSize: 11, textDecoration: "none" }}>
+                  AI INDEX: /LLMS.TXT ↗
+                </a>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(290px, 1fr))", gap: 16 }}>
+                {[
+                  {
+                    q: "What is SYNTHPLAY?",
+                    a: "SYNTHPLAY (synthplay.games) is a global, 100% free browser arcade built for indie and AI-crafted HTML5 & WebGL games. Players launch games instantly on desktop, iPad, or mobile with zero downloads, while creators host their games free on isolated Cloudflare R2 sandboxes."
+                  },
+                  {
+                    q: "How can indie or AI developers upload and host a game for free?",
+                    a: "Open the UPLOAD bay on SYNTHPLAY, paste a single self-contained HTML5 file (such as games built with Cursor, Claude, Gemini, or ChatGPT) or upload an HTML5/WebGL ZIP bundle up to 100MB containing index.html. Hosting is 100% free with zero bandwidth fees and 0% platform cut on creator tips."
+                  },
+                  {
+                    q: "How does SYNTHPLAY keep browser games safe for players?",
+                    a: "Every community-submitted game is scanned before publication and executed inside an isolated cross-origin sandbox (*.synthplay-box.cloud) with strict Content Security Policy and iframe sandboxing, preventing game scripts from accessing player sessions or cookies on synthplay.games."
+                  },
+                  {
+                    q: "Do SYNTHPLAY games support mobile phones, iPads, leaderboards, and cloud saves?",
+                    a: "Yes. Built-in arcade games include responsive touch controls, global and per-country high-score leaderboards, and optional authenticated cloud saves via the SynthPlay Browser SDK."
+                  }
+                ].map((faq) => (
+                  <article key={faq.q} className="cab-surface" style={{ padding: 20 }}>
+                    <h3 className="font-display" style={{ margin: "0 0 8px", fontSize: 15, fontWeight: 700, color: "var(--volt)" }}>
+                      {faq.q}
+                    </h3>
+                    <p style={{ margin: 0, fontSize: 13, color: "var(--ink-muted)", lineHeight: 1.65 }}>
+                      {faq.a}
+                    </p>
+                  </article>
+                ))}
+              </div>
+            </section>
           </main>
         </>
       )}
@@ -1118,6 +1163,7 @@ export function SynthPlayApp({ initial }: { initial: InitialData }) {
             <a href="/about" style={{ color: "var(--ink-muted)", textDecoration: "none" }}>ABOUT</a>
             <a href="/privacy" style={{ color: "var(--ink-muted)", textDecoration: "none" }}>PRIVACY POLICY</a>
             <a href="/terms" style={{ color: "var(--ink-muted)", textDecoration: "none" }}>TERMS OF SERVICE</a>
+            <a href="/llms.txt" style={{ color: "var(--ink-muted)", textDecoration: "none" }}>LLMS.TXT</a>
             <a href="mailto:support@synthplay.games" style={{ color: "var(--cyan)", textDecoration: "none" }}>support@synthplay.games</a>
           </div>
         </div>
