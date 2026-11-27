@@ -149,7 +149,7 @@ export function AdminConsole({
         </button>
         <button className={`ops-nav-btn ${tab === "i18n" ? "active" : ""}`} onClick={() => setTab("i18n")}>
           <span>06. I18N LANGUAGES</span>
-          <span>4</span>
+          <span>{SUPPORTED_LOCALES.length}</span>
         </button>
 
         <div style={{ marginTop: "auto", paddingTop: 16, borderTop: "1px solid var(--line)", display: "grid", gap: 8 }}>
