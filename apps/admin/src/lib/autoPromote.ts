@@ -140,6 +140,10 @@ export async function publishToArmedChannels(
   const status = getGrowthChannelsStatus();
   const results: Array<{ channel: string; status: string }> = [];
 
+  const coverUrl = game.coverImage?.startsWith("http")
+    ? game.coverImage
+    : `${MAIN_DOMAIN}${game.coverImage || "/games/tokyo-drift.jpg"}`;
+
   if (status.bluesky) {
     try {
       const sessRes = await fetch("https://bsky.social/xrpc/com.atproto.server.createSession", {
@@ -152,6 +156,54 @@ export async function publishToArmedChannels(
       });
       if (!sessRes.ok) throw new Error(`Auth HTTP ${sessRes.status}`);
       const sess = await sessRes.json();
+
+      let thumbBlob: unknown = null;
+      try {
+        const imgRes = await fetch(coverUrl);
+        if (imgRes.ok) {
+          const bytes = new Uint8Array(await imgRes.arrayBuffer());
+          if (bytes.byteLength > 0 && bytes.byteLength <= 950_000) {
+            const upRes = await fetch("https://bsky.social/xrpc/com.atproto.repo.uploadBlob", {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${sess.accessJwt}`,
+                "Content-Type": imgRes.headers.get("content-type") || "image/jpeg"
+              },
+              body: bytes
+            });
+            if (upRes.ok) thumbBlob = (await upRes.json())?.blob || null;
+          }
+        }
+      } catch {
+        // Proceed without thumbnail on transient fetch issue
+      }
+
+      const encoder = new TextEncoder();
+      const byteOff = (i: number) => encoder.encode(kit.shortSocialPost.slice(0, i)).byteLength;
+      const facets: Array<Record<string, unknown>> = [];
+      for (const m of kit.shortSocialPost.matchAll(/https?:\/\/[^\s]+/g)) {
+        const start = m.index ?? 0;
+        const raw = m[0].replace(/[.,!?;:)]+$/, "");
+        facets.push({
+          index: { byteStart: byteOff(start), byteEnd: byteOff(start + raw.length) },
+          features: [{ $type: "app.bsky.richtext.facet#link", uri: raw }]
+        });
+      }
+      for (const m of kit.shortSocialPost.matchAll(/(^|\s)#([a-zA-Z0-9_]+)/g)) {
+        const start = (m.index ?? 0) + m[1].length;
+        facets.push({
+          index: { byteStart: byteOff(start), byteEnd: byteOff(start + 1 + m[2].length) },
+          features: [{ $type: "app.bsky.richtext.facet#tag", tag: m[2] }]
+        });
+      }
+
+      const external: Record<string, unknown> = {
+        uri: kit.gameUrl,
+        title: `${game.title} — Play Free in Browser ▶`,
+        description: game.tagline
+      };
+      if (thumbBlob) external.thumb = thumbBlob;
+
       const postRes = await fetch("https://bsky.social/xrpc/com.atproto.repo.createRecord", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${sess.accessJwt}` },
@@ -161,16 +213,14 @@ export async function publishToArmedChannels(
           record: {
             $type: "app.bsky.feed.post",
             text: kit.shortSocialPost,
+            facets,
             createdAt: new Date().toISOString(),
-            embed: {
-              $type: "app.bsky.embed.external",
-              external: { uri: kit.gameUrl, title: `${game.title} — Play Free on SYNTHPLAY`, description: game.tagline }
-            }
+            embed: { $type: "app.bsky.embed.external", external }
           }
         })
       });
       if (!postRes.ok) throw new Error(`Post HTTP ${postRes.status}`);
-      results.push({ channel: "BLUESKY", status: "PUBLISHED" });
+      results.push({ channel: "BLUESKY", status: thumbBlob ? "PUBLISHED (HD CARD)" : "PUBLISHED" });
     } catch (e) {
       results.push({ channel: "BLUESKY", status: `ERROR: ${e instanceof Error ? e.message : "failed"}` });
     }
@@ -208,6 +258,9 @@ export async function publishToArmedChannels(
 
   if (status.devto) {
     try {
+      const bodyMd = kit.devtoMarkdown.includes("![")
+        ? kit.devtoMarkdown
+        : `![${game.title}](${coverUrl})\n\n${kit.devtoMarkdown}`;
       const res = await fetch("https://dev.to/api/articles", {
         method: "POST",
         headers: { "Content-Type": "application/json", "api-key": process.env.DEVTO_API_KEY || "" },
@@ -215,15 +268,15 @@ export async function publishToArmedChannels(
           article: {
             title: `${game.title} — Free ${game.category} Browser Game on SYNTHPLAY`,
             published: true,
-            body_markdown: kit.devtoMarkdown,
+            body_markdown: bodyMd,
             canonical_url: kit.gameUrl,
-            main_image: `${kit.gameUrl}/opengraph-image`,
+            main_image: coverUrl,
             tags: ["gamedev", "html5", "indiedev", "webdev"]
           }
         })
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      results.push({ channel: "DEV.TO", status: "PUBLISHED" });
+      results.push({ channel: "DEV.TO", status: "PUBLISHED (HD COVER)" });
     } catch (e) {
       results.push({ channel: "DEV.TO", status: `ERROR: ${e instanceof Error ? e.message : "failed"}` });
     }
@@ -236,7 +289,7 @@ export async function publishToArmedChannels(
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           content: kit.shortSocialPost,
-          embeds: [{ title: `${game.title} — Play Free ▶`, description: game.tagline, url: kit.gameUrl, color: 15990528, image: { url: `${kit.gameUrl}/opengraph-image` } }]
+          embeds: [{ title: `${game.title} — Play Free ▶`, description: game.tagline, url: kit.gameUrl, color: 15990528, image: { url: coverUrl } }]
         })
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -248,13 +301,13 @@ export async function publishToArmedChannels(
 
   if (status.telegram) {
     try {
-      const res = await fetch(`https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
+      const res = await fetch(`https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendPhoto`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ chat_id: process.env.TELEGRAM_CHAT_ID, text: kit.shortSocialPost })
+        body: JSON.stringify({ chat_id: process.env.TELEGRAM_CHAT_ID, photo: coverUrl, caption: kit.shortSocialPost })
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      results.push({ channel: "TELEGRAM", status: "PUBLISHED" });
+      results.push({ channel: "TELEGRAM", status: "PUBLISHED (HD PHOTO)" });
     } catch (e) {
       results.push({ channel: "TELEGRAM", status: `ERROR: ${e instanceof Error ? e.message : "failed"}` });
     }
