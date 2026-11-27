@@ -97,11 +97,22 @@ export function AdminConsole({
       {/* Left Sidebar */}
       <aside className="ops-sidebar">
         <div style={{ padding: "4px 8px 14px", borderBottom: "1px solid var(--line)", marginBottom: 10 }}>
-          <div className="font-display" style={{ fontSize: 18, fontWeight: 700, color: "var(--volt)" }}>
-            SYNTHPLAY OPS
-          </div>
-          <div className="font-mono" style={{ fontSize: 10, color: "var(--muted)", marginTop: 4 }}>
-            ADMIN.SYNTHPLAY.GAMES // RBAC
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <img
+              src="/brand-logo.png"
+              alt="SYNTHPLAY"
+              width={32}
+              height={32}
+              style={{ borderRadius: 6, border: "1px solid rgba(243,255,0,0.45)", flexShrink: 0 }}
+            />
+            <div>
+              <div className="font-display" style={{ fontSize: 18, fontWeight: 700, color: "var(--volt)", lineHeight: 1.1 }}>
+                SYNTHPLAY OPS
+              </div>
+              <div className="font-mono" style={{ fontSize: 10, color: "var(--muted)", marginTop: 3 }}>
+                ADMIN.SYNTHPLAY.GAMES // RBAC
+              </div>
+            </div>
           </div>
           <div className="font-mono" style={{ fontSize: 10, marginTop: 8, display: "flex", gap: 6, flexWrap: "wrap" }}>
             <span style={{ padding: "2px 6px", border: `1px solid ${engine.pg ? "var(--cyan)" : "var(--amber)"}`, color: engine.pg ? "var(--cyan)" : "var(--amber)" }}>

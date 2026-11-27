@@ -225,7 +225,15 @@ export function SynthPlayApp({ initial }: { initial: InitialData }) {
               style={{ background: "none", border: 0, cursor: "pointer", padding: 0, textAlign: "left" }}
               onClick={() => navigateView("arcade", "ARCADE HALL")}
             >
-              <div className="sp-logo-mark">SP</div>
+              <div className="sp-logo-mark">
+                <img
+                  src="/brand-logo.png"
+                  alt="SYNTHPLAY"
+                  width={38}
+                  height={38}
+                  style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+                />
+              </div>
               <div>
                 <div className="font-display" style={{ fontSize: 19, fontWeight: 700, lineHeight: 1, color: "#fff" }}>
                   SYNTHPLAY
