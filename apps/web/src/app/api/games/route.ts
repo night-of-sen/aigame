@@ -10,6 +10,8 @@ import {
 } from "@synthplay/db";
 import { scanHtmlSubmission, wrapSingleHtmlForSandbox } from "@synthplay/sandbox-security";
 import { translateGameMetadata } from "@/lib/aiTranslate";
+import { verifyTurnstileToken } from "@/lib/turnstile";
+import { pickCategoryCoverFallback, saveGameCoverImage } from "@/lib/r2Storage";
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -45,23 +47,46 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const session = verifySessionToken(req.cookies.get(USER_SESSION_COOKIE)?.value);
+    if (!session) {
+      return NextResponse.json({ error: "Please sign in with Google or email before uploading a game." }, { status: 401 });
+    }
+
     const body = await req.json();
+
+    // Anti-bot verification (Turnstile)
+    const ip = req.headers.get("cf-connecting-ip") || req.headers.get("x-forwarded-for")?.split(",")[0];
+    const turnstile = await verifyTurnstileToken(String(body.turnstileToken || ""), ip);
+    if (!turnstile.ok) {
+      return NextResponse.json(
+        { error: turnstile.error || "Human verification failed. Please complete the Turnstile check and try again." },
+        { status: 403 }
+      );
+    }
+
+    const store = await loadFullStore();
+    const userRecord = store.users.find((u) => u.id === session.sub);
+    if (userRecord && (userRecord.status === "banned" || userRecord.status === "muted")) {
+      return NextResponse.json({ error: "Your account is currently restricted from publishing games." }, { status: 403 });
+    }
+
     const title = String(body.title || "").trim();
     const titleZh = String(body.titleZh || title).trim();
-    const tagline = String(body.tagline || "Free playable community AI game.").trim();
+    const tagline = String(body.tagline || "Free playable community HTML5 & AI browser game.").trim();
     const taglineZh = String(body.taglineZh || tagline).trim();
-    const creatorName = session?.username || String(body.creatorName || "IndieCreator").trim();
-    const creatorCountryCode = (session?.countryCode || String(body.creatorCountryCode || "CN")).toUpperCase().slice(0, 4);
+    const creatorName = userRecord?.username || session.username;
+    const creatorCountryCode = (userRecord?.countryCode || session.countryCode || "US").toUpperCase().slice(0, 4);
     const playType: PlayType = body.playType === "html5_zip" ? "html5_zip" : "single_html";
     const category = String(body.category || "ARCADE").toUpperCase();
-    const aiTools = Array.isArray(body.aiTools) ? body.aiTools.map(String) : ["AI Assisted"];
+    const aiTools = Array.isArray(body.aiTools) && body.aiTools.length > 0 ? body.aiTools.map(String) : ["HTML5", "AI Assisted"];
     const aiPromptNote = String(body.aiPromptNote || "").trim();
     const rawHtml = typeof body.sandboxHtml === "string" ? body.sandboxHtml : "";
     const creatorTipUrl = typeof body.creatorTipUrl === "string" ? body.creatorTipUrl.trim() : "";
-    const publishImmediately = Boolean(body.publishImmediately);
 
     if (!title) {
       return NextResponse.json({ error: "Game title is required." }, { status: 400 });
+    }
+    if (playType === "single_html" && rawHtml.trim().length < 40) {
+      return NextResponse.json({ error: "Please drop a valid .html game file or paste your HTML5 game code." }, { status: 400 });
     }
 
     const scanReport = rawHtml
@@ -85,19 +110,11 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const store = await loadFullStore();
     const id = `gm-${Date.now().toString(36)}`;
     const slug = `${title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "game"}-${id.slice(-4)}`;
 
-    const covers = [
-      "/games/tokyo-drift.jpg",
-      "/games/mecha-arena.jpg",
-      "/games/noir-detective.jpg",
-      "/games/bullet-hell.jpg",
-      "/games/synth-dungeon.jpg",
-      "/games/orbital-colony.jpg"
-    ];
-    const coverImage = body.coverImage || covers[store.games.length % covers.length];
+    const uploadedCover = await saveGameCoverImage(id, typeof body.coverDataUrl === "string" ? body.coverDataUrl : undefined);
+    const coverImage = uploadedCover || pickCategoryCoverFallback(category);
     const accentPalette = ["#F3FF00", "#FF2A3C", "#00F0D4"];
     const accentColor = accentPalette[store.games.length % accentPalette.length];
 
@@ -108,6 +125,18 @@ export async function POST(req: NextRequest) {
       aiPromptNote
     });
 
+    // Strategy 1 Tiered Trust:
+    // - Verified Creators & Admins/Moderators auto-publish immediately when security scan is SAFE.
+    // - New/unverified creators route cleanly into Admin Review Queue (protecting AdSense compliance).
+    const isTrustedCreator = Boolean(
+      userRecord?.isVerifiedCreator ||
+        userRecord?.role === "admin" ||
+        userRecord?.role === "moderator" ||
+        session.role === "admin" ||
+        session.role === "moderator"
+    );
+    const shouldAutoPublish = isTrustedCreator && scanReport.verdict === "SAFE";
+
     const newGame: GameRecord = {
       id,
       slug,
@@ -116,7 +145,7 @@ export async function POST(req: NextRequest) {
       tagline: i18nRes.translations.en?.tagline || tagline,
       taglineZh: i18nRes.translations["zh-CN"]?.tagline || taglineZh,
       translations: i18nRes.translations,
-      creatorId: session?.sub || "usr-002",
+      creatorId: session.sub,
       creatorName,
       creatorCountryCode,
       playType,
@@ -126,11 +155,11 @@ export async function POST(req: NextRequest) {
       aiPromptNote,
       coverImage,
       accentColor,
-      status: publishImmediately && scanReport.verdict === "SAFE" ? "published" : "pending_review",
-      totalValidPlays: 1,
-      plays24h: 1,
+      status: shouldAutoPublish ? "published" : "pending_review",
+      totalValidPlays: 0,
+      plays24h: 0,
       rating: 5.0,
-      countryPlays: { [creatorCountryCode]: 1 },
+      countryPlays: {},
       sandboxHtml: wrappedHtml,
       securityScore: scanReport.score,
       securityVerdict: scanReport.verdict,
@@ -142,13 +171,21 @@ export async function POST(req: NextRequest) {
     await appendAuditLog({
       id: `aud-${Date.now().toString(36)}`,
       actor: creatorName,
-      action: "GAME_UPLOADED",
+      action: shouldAutoPublish ? "GAME_AUTO_PUBLISHED" : "GAME_SUBMITTED_FOR_REVIEW",
       target: `${id} (${newGame.title})`,
-      detail: `PlayType: ${playType}, Security: ${scanReport.verdict} (${scanReport.score}/100), AI Translate: ${i18nRes.translated ? i18nRes.provider : "standby"}`,
+      detail: `PlayType: ${playType}, Trusted: ${isTrustedCreator}, Security: ${scanReport.verdict} (${scanReport.score}/100), CustomCover: ${Boolean(uploadedCover)}, AI Translate: ${i18nRes.translated ? i18nRes.provider : "standby"}`,
       createdAt: new Date().toISOString()
     });
 
-    return NextResponse.json({ game: newGame, scanReport, translated: i18nRes.translated }, { status: 201 });
+    return NextResponse.json(
+      {
+        game: newGame,
+        scanReport,
+        translated: i18nRes.translated,
+        autoPublished: shouldAutoPublish
+      },
+      { status: 201 }
+    );
   } catch {
     return NextResponse.json({ error: "Invalid upload payload." }, { status: 400 });
   }

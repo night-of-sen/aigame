@@ -11,6 +11,7 @@ export interface AuthUserSummary {
   countryCode: string;
   role: string;
   isProSupporter?: boolean;
+  isVerifiedCreator?: boolean;
 }
 
 function GoogleIcon() {

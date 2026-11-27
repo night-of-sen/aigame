@@ -501,9 +501,13 @@ export function SynthPlayApp({ initial }: { initial: InitialData }) {
       {view === "studio" && (
         <StudioView
           locale={locale}
+          currentUser={currentUser}
+          onRequestSignIn={() => setAuthModalOpen(true)}
           onUploaded={(newGame) => {
-            setGames((prev) => [newGame, ...prev]);
-            refreshData(country);
+            if (newGame.status === "published") {
+              setGames((prev) => [newGame, ...prev]);
+              refreshData(country);
+            }
           }}
         />
       )}

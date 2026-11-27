@@ -1,8 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
+import { USER_SESSION_COOKIE, verifySessionToken } from "@synthplay/db";
 import { createPresignedQuarantineUpload } from "@/lib/r2Storage";
 
 export async function POST(req: NextRequest) {
   try {
+    const session = verifySessionToken(req.cookies.get(USER_SESSION_COOKIE)?.value);
+    if (!session) {
+      return NextResponse.json({ error: "Please sign in before uploading a game bundle." }, { status: 401 });
+    }
+
     const body = await req.json();
     const fileName = String(body.fileName || "game.zip").trim();
     const sizeBytes = Number(body.sizeBytes || 0);

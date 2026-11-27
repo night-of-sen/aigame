@@ -142,14 +142,18 @@ export default async function HomePage() {
           initialLocale,
           googleAuthEnabled,
           currentUser: session
-            ? {
-                id: session.sub,
-                username: session.username,
-                email: session.email,
-                countryCode: session.countryCode,
-                role: session.role,
-                isProSupporter: Boolean(store.users.find((u) => u.id === session.sub)?.isProSupporter)
-              }
+            ? (() => {
+                const dbUser = store.users.find((u) => u.id === session.sub);
+                return {
+                  id: session.sub,
+                  username: dbUser?.username || session.username,
+                  email: session.email,
+                  countryCode: dbUser?.countryCode || session.countryCode,
+                  role: dbUser?.role || session.role,
+                  isProSupporter: Boolean(dbUser?.isProSupporter),
+                  isVerifiedCreator: Boolean(dbUser?.isVerifiedCreator)
+                };
+              })()
             : null
         }}
       />

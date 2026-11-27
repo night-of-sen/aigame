@@ -403,3 +403,58 @@ export async function processAndPublishZipBundle(params: {
     scanReport
   };
 }
+
+export function pickCategoryCoverFallback(category: string): string {
+  const cat = (category || "").toUpperCase();
+  if (cat.includes("RACING")) return "/games/tokyo-drift.jpg";
+  if (cat.includes("TACTICS")) return "/games/mecha-arena.jpg";
+  if (cat.includes("NOIR")) return "/games/noir-detective.jpg";
+  if (cat.includes("SHMUP")) return "/games/bullet-hell.jpg";
+  if (cat.includes("ROGUELIKE")) return "/games/synth-dungeon.jpg";
+  if (cat.includes("STRATEGY")) return "/games/orbital-colony.jpg";
+  if (cat.includes("PUZZLE")) return "/games/volt-2048.jpg";
+  if (cat.includes("BRICK")) return "/games/pulse-breaker.jpg";
+  if (cat.includes("SURVIVAL")) return "/games/hyper-survivor.jpg";
+  return "/games/neon-serpent.jpg";
+}
+
+export async function saveGameCoverImage(gameId: string, dataUrl?: string): Promise<string | null> {
+  if (!dataUrl || typeof dataUrl !== "string") return null;
+  const match = dataUrl.match(/^data:image\/(jpeg|jpg|png|webp);base64,([A-Za-z0-9+/=]+)$/);
+  if (!match) return null;
+
+  const ext = match[1] === "jpeg" ? "jpg" : match[1];
+  const contentType = ext === "jpg" ? "image/jpeg" : `image/${ext}`;
+  const bytes = Buffer.from(match[2], "base64");
+  if (bytes.byteLength === 0 || bytes.byteLength > 1.5 * 1024 * 1024) return null;
+
+  if (isR2Configured()) {
+    const prodBucket = process.env.R2_BUCKET_PROD || "synthplay-games-prod";
+    const r2 = getR2Client();
+    await r2.send(
+      new PutObjectCommand({
+        Bucket: prodBucket,
+        Key: `games/${gameId}/cover.${ext}`,
+        Body: bytes,
+        ContentType: contentType,
+        CacheControl: "public, max-age=31536000, immutable"
+      })
+    );
+
+    const wildcardEnabled = process.env.R2_WILDCARD_SANDBOX_ENABLED === "true";
+    const sandboxDomain = (process.env.NEXT_PUBLIC_SANDBOX_DOMAIN || "https://synthplay-box.cloud")
+      .replace(/^https?:\/\//i, "")
+      .replace(/\/.*$/, "");
+    const sandboxBase = (process.env.R2_PUBLIC_CDN_URL || "https://cdn.synthplay-box.cloud").replace(/\/$/, "");
+
+    return wildcardEnabled
+      ? `https://${gameId}.${sandboxDomain}/cover.${ext}`
+      : `${sandboxBase}/games/${gameId}/cover.${ext}`;
+  }
+
+  const gameRoot = path.join(getLocalBundlesDir(), gameId);
+  fs.mkdirSync(gameRoot, { recursive: true });
+  fs.writeFileSync(path.join(gameRoot, `cover.${ext}`), bytes);
+  return `/api/sandbox/${gameId}/cover.${ext}`;
+}
+
