@@ -361,15 +361,22 @@ export async function processAndPublishZipBundle(params: {
       );
     }
 
+    const wildcardEnabled = process.env.R2_WILDCARD_SANDBOX_ENABLED === "true";
+    const sandboxDomain = (process.env.NEXT_PUBLIC_SANDBOX_DOMAIN || "https://synthplay-box.cloud")
+      .replace(/^https?:\/\//i, "")
+      .replace(/\/.*$/, "");
     const sandboxBase = (
       process.env.R2_PUBLIC_CDN_URL ||
-      process.env.NEXT_PUBLIC_SANDBOX_DOMAIN ||
       "https://cdn.synthplay-box.cloud"
     ).replace(/\/$/, "");
 
+    const sandboxUrl = wildcardEnabled
+      ? `https://${params.gameId}.${sandboxDomain}/index.html`
+      : `${sandboxBase}/games/${params.gameId}/index.html`;
+
     return {
       ok: true,
-      sandboxUrl: `${sandboxBase}/games/${params.gameId}/index.html`,
+      sandboxUrl,
       storageMode: "cloudflare_r2",
       fileCount: finalFiles.length,
       totalBytes: manifestCheck.totalUncompressedBytes,

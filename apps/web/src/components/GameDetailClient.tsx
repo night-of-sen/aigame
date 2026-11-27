@@ -5,6 +5,7 @@ import Link from "next/link";
 import type { GameRecord, ReviewRecord } from "@synthplay/db";
 import { ArcadeCabinetModal } from "./ArcadeCabinetModal";
 import { AdSenseSlot } from "./AdSenseSlot";
+import { TurnstileWidget } from "./TurnstileWidget";
 import { IconPlay, IconShield, IconSpark } from "./Icons";
 
 export function GameDetailClient({
@@ -21,6 +22,7 @@ export function GameDetailClient({
   const [visualScore, setVisualScore] = useState(5);
   const [aiScore, setAiScore] = useState(5);
   const [comment, setComment] = useState("");
+  const [turnstileToken, setTurnstileToken] = useState("");
   const [copied, setCopied] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
@@ -33,7 +35,7 @@ export function GameDetailClient({
       const res = await fetch(`/api/games/${game.slug}/reviews`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ gameplayScore, visualScore, aiScore, comment })
+        body: JSON.stringify({ gameplayScore, visualScore, aiScore, comment, turnstileToken })
       });
       const data = await res.json();
       if (res.ok && data.review) {
@@ -193,6 +195,7 @@ export function GameDetailClient({
                 value={comment}
                 onChange={(e) => setComment(e.target.value)}
               />
+              <TurnstileWidget onToken={setTurnstileToken} />
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <span className="font-mono" style={{ fontSize: 11, color: "var(--cyan)" }}>{msg || ""}</span>
                 <button type="submit" className="btn-volt" style={{ padding: "8px 16px", fontSize: 12 }} disabled={submitting}>

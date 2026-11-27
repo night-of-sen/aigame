@@ -6,6 +6,7 @@ import {
   verifySessionToken,
   type ReviewRecord
 } from "@synthplay/db";
+import { verifyTurnstileToken } from "@/lib/turnstile";
 
 export async function GET(
   _req: NextRequest,
@@ -31,6 +32,15 @@ export async function POST(
 
     const body = await req.json();
     const session = verifySessionToken(req.cookies.get(USER_SESSION_COOKIE)?.value);
+    if (!session) {
+      const turnstile = await verifyTurnstileToken(
+        body.turnstileToken,
+        req.headers.get("cf-connecting-ip") || req.headers.get("x-forwarded-for")
+      );
+      if (!turnstile.ok) {
+        return NextResponse.json({ error: turnstile.error || "Anti-bot check failed." }, { status: 403 });
+      }
+    }
     const comment = String(body.comment || "").trim();
     if (comment.length < 3 || comment.length > 600) {
       return NextResponse.json({ error: "Review must be between 3 and 600 characters." }, { status: 400 });
