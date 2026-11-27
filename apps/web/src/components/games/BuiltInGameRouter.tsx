@@ -8,6 +8,10 @@ import { RamenAlleyGame } from "./RamenAlleyGame";
 import { CrimsonDanmakuGame } from "./CrimsonDanmakuGame";
 import { MonolithBreakerGame } from "./MonolithBreakerGame";
 import { KeplerRingGame } from "./KeplerRingGame";
+import { NeonSerpentGame } from "./NeonSerpentGame";
+import { Volt2048Game } from "./Volt2048Game";
+import { PulseBreakerGame } from "./PulseBreakerGame";
+import { HyperSurvivorGame } from "./HyperSurvivorGame";
 
 export function BuiltInGameRouter({
   game,
@@ -19,6 +23,18 @@ export function BuiltInGameRouter({
   const slug = game.slug.toLowerCase();
   const cat = game.category.toUpperCase();
 
+  if (slug.includes("serpent") || slug.includes("snake") || cat === "ARCADE") {
+    return <NeonSerpentGame onScore={onScore} />;
+  }
+  if (slug.includes("2048") || slug.includes("volt-2048") || cat === "PUZZLE") {
+    return <Volt2048Game onScore={onScore} />;
+  }
+  if (slug.includes("pulse-breaker") || slug.includes("brick") || cat === "BRICK") {
+    return <PulseBreakerGame onScore={onScore} />;
+  }
+  if (slug.includes("survivor") || cat === "SURVIVAL") {
+    return <HyperSurvivorGame onScore={onScore} />;
+  }
   if (slug.includes("wangan") || slug.includes("drift") || cat === "RACING") {
     return <WanganDriftGame onScore={onScore} />;
   }

@@ -131,13 +131,18 @@ export default async function GameDetailPage({
     ]
   };
 
+  const relatedGames = store.games
+    .filter((g) => g.status === "published" && g.id !== game.id)
+    .sort((a, b) => (a.category === game.category ? -1 : b.category === game.category ? 1 : 0))
+    .slice(0, 3);
+
   return (
     <>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
-      <GameDetailClient game={game} initialReviews={reviews} />
+      <GameDetailClient game={game} initialReviews={reviews} relatedGames={relatedGames} />
     </>
   );
 }

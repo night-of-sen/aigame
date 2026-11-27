@@ -5,6 +5,7 @@ import Link from "next/link";
 import type { GameRecord, SponsorSlotRecord } from "@synthplay/db";
 import { COUNTRIES, SUPPORTED_LOCALES, getCountryName, type Locale, t } from "@synthplay/i18n";
 import { arcadeAudio } from "@/lib/arcadeAudio";
+import { readFavoriteIds, toggleFavoriteId } from "@/lib/favorites";
 import { ArcadeShaderBg } from "./ArcadeShaderBg";
 import { ScrambleText } from "./ScrambleText";
 import { ArcadeCabinetModal } from "./ArcadeCabinetModal";
@@ -65,6 +66,9 @@ export function SynthPlayApp({ initial }: { initial: InitialData }) {
 
   const [country, setCountry] = useState("ALL");
   const [catalogFilter, setCatalogFilter] = useState<"ALL" | "AI" | "WEBGL" | "SINGLE">("ALL");
+  const [selectedGenre, setSelectedGenre] = useState("ALL");
+  const [onlyFavorites, setOnlyFavorites] = useState(false);
+  const [favoriteIds, setFavoriteIds] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchEngine, setSearchEngine] = useState<"meilisearch" | "local" | null>(null);
   const [searchHits, setSearchHits] = useState<GameRecord[] | null>(null);
@@ -77,6 +81,10 @@ export function SynthPlayApp({ initial }: { initial: InitialData }) {
   const [hoverAccent, setHoverAccent] = useState<string | null>(null);
   const [hoveredCardId, setHoveredCardId] = useState<string | null>(null);
   const [activeGame, setActiveGame] = useState<GameRecord | null>(null);
+
+  useEffect(() => {
+    setFavoriteIds(readFavoriteIds());
+  }, []);
 
   useEffect(() => {
     const q = searchQuery.trim();
@@ -99,8 +107,15 @@ export function SynthPlayApp({ initial }: { initial: InitialData }) {
     return () => clearTimeout(timer);
   }, [searchQuery, country]);
 
-  const publishedGames = (searchHits ?? games).filter((g) => g.status === "published");
-  const featuredList = games.filter((g) => g.status === "published").slice(0, 6);
+  const allPublished = games.filter((g) => g.status === "published");
+  const availableGenres = Array.from(new Set(allPublished.map((g) => g.category.toUpperCase()))).sort();
+  const publishedGames = (searchHits ?? games).filter((g) => {
+    if (g.status !== "published") return false;
+    if (selectedGenre !== "ALL" && g.category.toUpperCase() !== selectedGenre) return false;
+    if (onlyFavorites && !favoriteIds.includes(g.id)) return false;
+    return true;
+  });
+  const featuredList = allPublished.slice(0, 6);
   const heroGame = featuredList[heroIdx % Math.max(1, featuredList.length)] ?? featuredList[0];
 
   const triggerHeroSwitch = useCallback((nextIdx: number) => {
@@ -744,8 +759,8 @@ export function SynthPlayApp({ initial }: { initial: InitialData }) {
                   <button
                     key={f}
                     type="button"
-                    className={`country-btn ${catalogFilter === f ? "active" : ""}`}
-                    onClick={() => { arcadeAudio.playSwitch(); setCatalogFilter(f); }}
+                    className={`country-btn ${!onlyFavorites && catalogFilter === f ? "active" : ""}`}
+                    onClick={() => { arcadeAudio.playSwitch(); setOnlyFavorites(false); setCatalogFilter(f); }}
                   >
                     {f === "ALL"
                       ? t(locale, "catalogFilterAll")
@@ -756,11 +771,18 @@ export function SynthPlayApp({ initial }: { initial: InitialData }) {
                           : t(locale, "catalogFilterSingle")}
                   </button>
                 ))}
+                <button
+                  type="button"
+                  className={`country-btn ${onlyFavorites ? "active" : ""}`}
+                  onClick={() => { arcadeAudio.playSwitch(); setOnlyFavorites((v) => !v); }}
+                >
+                  <span>★ {locale === "zh-CN" ? "收藏" : "SAVED"} ({favoriteIds.length})</span>
+                </button>
               </div>
             </div>
 
-            <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 10, marginBottom: 16 }}>
-              <div style={{ position: "relative", flex: "1 1 280px", maxWidth: 460 }}>
+            <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 10, marginBottom: 14 }}>
+              <div style={{ position: "relative", flex: "1 1 260px", maxWidth: 460 }}>
                 <input
                   type="search"
                   className="sp-input font-mono"
@@ -791,11 +813,47 @@ export function SynthPlayApp({ initial }: { initial: InitialData }) {
                   </button>
                 )}
               </div>
+              <button
+                type="button"
+                className="btn-steel font-mono"
+                style={{ padding: "9px 14px", fontSize: 11, borderColor: "rgba(0,240,212,0.45)", color: "var(--cyan)", whiteSpace: "nowrap" }}
+                onClick={() => {
+                  const pool = publishedGames.length > 0 ? publishedGames : allPublished;
+                  if (pool.length === 0) return;
+                  const pick = pool[Math.floor(Math.random() * pool.length)];
+                  launchGame(pick);
+                }}
+              >
+                <span>🎲 {locale === "zh-CN" ? "随机开玩" : "RANDOM PLAY"}</span>
+              </button>
               {searchEngine && (
                 <span className="font-mono" style={{ fontSize: 10, color: searchEngine === "meilisearch" ? "var(--cyan)" : "var(--ink-muted)", border: "1px solid var(--hairline)", padding: "4px 8px" }}>
                   ENGINE: {searchEngine.toUpperCase()} ({publishedGames.length} HITS)
                 </span>
               )}
+            </div>
+
+            {/* Genre Filter Pills */}
+            <div className="country-bar" style={{ marginBottom: 10 }}>
+              <button
+                type="button"
+                className={`country-btn ${selectedGenre === "ALL" ? "active" : ""}`}
+                style={{ padding: "5px 11px", fontSize: 11 }}
+                onClick={() => { arcadeAudio.playSwitch(); setSelectedGenre("ALL"); }}
+              >
+                <span>{locale === "zh-CN" ? "全部分类" : "ALL GENRES"} ({allPublished.length})</span>
+              </button>
+              {availableGenres.map((genre) => (
+                <button
+                  key={genre}
+                  type="button"
+                  className={`country-btn ${selectedGenre === genre ? "active" : ""}`}
+                  style={{ padding: "5px 11px", fontSize: 11 }}
+                  onClick={() => { arcadeAudio.playSwitch(); setSelectedGenre(genre); }}
+                >
+                  <span>{genre}</span>
+                </button>
+              ))}
             </div>
 
             <div className="country-bar">
@@ -815,14 +873,22 @@ export function SynthPlayApp({ initial }: { initial: InitialData }) {
             {/* Split Grid: Left Game Catalog / Right Live Leaderboards */}
             <div className="arcade-main-grid">
               <div>
+                {publishedGames.length === 0 ? (
+                  <div className="cab-surface font-mono" style={{ padding: 28, textAlign: "center", color: "var(--ink-muted)", fontSize: 12 }}>
+                    {onlyFavorites
+                      ? (locale === "zh-CN" ? "你还没有收藏游戏，点击任意游戏卡片右上角的 ☆ 即可收藏！" : "No saved games yet — click ☆ on any game card to bookmark it!")
+                      : (locale === "zh-CN" ? "当前筛选条件下暂无游戏，试试切换分类或清空搜索。" : "No games match the current filter. Try clearing filters or searching another keyword.")}
+                  </div>
+                ) : (
                 <div className="catalog-grid">
                   {publishedGames.map((g, idx) => {
                     const isHovered = hoveredCardId === g.id;
+                    const isSaved = favoriteIds.includes(g.id);
                     return (
                       <article
                         key={g.id}
                         className="arcade-card"
-                        style={{ animationDelay: `${idx * 65}ms` }}
+                        style={{ animationDelay: `${idx * 55}ms` }}
                         onMouseMove={handleCardMouseMove}
                         onMouseEnter={() => {
                           arcadeAudio.playHover();
@@ -843,13 +909,40 @@ export function SynthPlayApp({ initial }: { initial: InitialData }) {
                             paused={Boolean(activeGame)}
                           />
 
+                          {/* One-Click Favorite Bookmark Star */}
+                          <button
+                            type="button"
+                            aria-label={isSaved ? "Remove from favorites" : "Save to favorites"}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              arcadeAudio.playSwitch();
+                              setFavoriteIds(toggleFavoriteId(g.id));
+                            }}
+                            className="font-mono"
+                            style={{
+                              position: "absolute",
+                              top: 10,
+                              left: 10,
+                              zIndex: 8,
+                              padding: "4px 8px",
+                              borderRadius: 5,
+                              border: `1px solid ${isSaved ? "var(--volt)" : "rgba(255,255,255,0.22)"}`,
+                              background: isSaved ? "rgba(243,255,0,0.2)" : "rgba(6,7,10,0.78)",
+                              color: isSaved ? "var(--volt)" : "#fff",
+                              fontSize: 12,
+                              cursor: "pointer"
+                            }}
+                          >
+                            {isSaved ? "★" : "☆"}
+                          </button>
+
                           <div className="arcade-card-play-overlay">
                             <div className="font-mono" style={{ display: "flex", gap: 6, fontSize: 10 }}>
                               <span style={{ padding: "3px 7px", borderRadius: 4, background: "rgba(6,7,10,0.86)", border: "1px solid var(--hairline-strong)", color: "#fff" }}>
                                 {g.creatorCountryCode}
                               </span>
                               <span style={{ padding: "3px 7px", borderRadius: 4, background: "rgba(6,7,10,0.86)", border: "1px solid rgba(0,240,212,0.5)", color: "var(--cyan)" }}>
-                                {t(locale, "freeOnline")}
+                                {g.category}
                               </span>
                             </div>
                             <span className="play-chip">{t(locale, "playNow")} ▶</span>
@@ -871,8 +964,15 @@ export function SynthPlayApp({ initial }: { initial: InitialData }) {
                           </p>
 
                           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: 10, borderTop: "1px solid var(--hairline)", fontSize: 11, gap: 8 }}>
-                            <div className="font-mono" style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                              {g.aiTools.slice(0, 2).map((tool) => (
+                            <div className="font-mono" style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+                              <Link
+                                href={`/u/${encodeURIComponent(g.creatorName)}`}
+                                onClick={(e) => e.stopPropagation()}
+                                style={{ color: "var(--ink)", textDecoration: "none", fontWeight: 600 }}
+                              >
+                                @{g.creatorName}
+                              </Link>
+                              {g.aiTools.slice(0, 1).map((tool) => (
                                 <span key={tool} style={{ color: "var(--ink-muted)" }}>#{tool}</span>
                               ))}
                             </div>
@@ -894,6 +994,7 @@ export function SynthPlayApp({ initial }: { initial: InitialData }) {
                     );
                   })}
                 </div>
+                )}
               </div>
 
               {/* Right Column: Live Dual Leaderboard Engine with Rotating Neon Perimeter */}

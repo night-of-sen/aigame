@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import type { GameRecord, ReviewRecord } from "@synthplay/db";
+import { readFavoriteIds, toggleFavoriteId } from "@/lib/favorites";
 import { ArcadeCabinetModal } from "./ArcadeCabinetModal";
 import { AdSenseSlot } from "./AdSenseSlot";
 import { TurnstileWidget } from "./TurnstileWidget";
@@ -11,10 +12,12 @@ import { IconPlay, IconShield, IconSpark } from "./Icons";
 
 export function GameDetailClient({
   game,
-  initialReviews
+  initialReviews,
+  relatedGames = []
 }: {
   game: GameRecord;
   initialReviews: ReviewRecord[];
+  relatedGames?: GameRecord[];
 }) {
   const [playing, setPlaying] = useState(false);
   const [plays, setPlays] = useState(game.totalValidPlays);
@@ -25,8 +28,18 @@ export function GameDetailClient({
   const [comment, setComment] = useState("");
   const [turnstileToken, setTurnstileToken] = useState("");
   const [copied, setCopied] = useState(false);
+  const [isFav, setIsFav] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+
+  useEffect(() => {
+    setIsFav(readFavoriteIds().includes(game.id));
+  }, [game.id]);
+
+  const handleToggleFav = () => {
+    const next = toggleFavoriteId(game.id);
+    setIsFav(next.includes(game.id));
+  };
 
   const submitReview = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -101,6 +114,17 @@ export function GameDetailClient({
             >
               <span>REDDIT ↗</span>
             </a>
+            <button
+              type="button"
+              className="btn-steel sp-ctrl-pill font-mono"
+              style={{
+                borderColor: isFav ? "var(--volt)" : undefined,
+                color: isFav ? "var(--volt)" : undefined
+              }}
+              onClick={handleToggleFav}
+            >
+              <span>{isFav ? "★ SAVED" : "☆ SAVE"}</span>
+            </button>
             <button type="button" className="btn-steel sp-ctrl-pill font-mono" onClick={shareUrl}>
               <span>{copied ? "COPIED!" : "COPY LINK"}</span>
             </button>
@@ -180,20 +204,28 @@ export function GameDetailClient({
                 </div>
               </div>
 
-              <div style={{ paddingTop: 10, borderTop: "1px solid var(--hairline)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div style={{ paddingTop: 10, borderTop: "1px solid var(--hairline)", display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
                 <div>
-                  <div className="font-display" style={{ fontSize: 14, fontWeight: 700 }}>SUPPORT {game.creatorName}</div>
-                  <div style={{ fontSize: 12, color: "var(--ink-muted)" }}>0% platform commission · Direct creator tip</div>
+                  <Link
+                    href={`/u/${encodeURIComponent(game.creatorName)}`}
+                    className="font-display"
+                    style={{ fontSize: 14, fontWeight: 700, color: "var(--volt)", textDecoration: "none" }}
+                  >
+                    @{game.creatorName} [{game.creatorCountryCode}] — VIEW CREATOR PROFILE ↗
+                  </Link>
+                  <div style={{ fontSize: 12, color: "var(--ink-muted)", marginTop: 2 }}>0% platform commission · Direct creator tip</div>
                 </div>
-                <a
-                  href={game.creatorTipUrl || "https://ko-fi.com"}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="btn-crimson"
-                  style={{ padding: "8px 14px", fontSize: 12 }}
-                >
-                  <IconSpark size={13} /> TIP CREATOR
-                </a>
+                {game.creatorTipUrl && (
+                  <a
+                    href={game.creatorTipUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="btn-crimson"
+                    style={{ padding: "8px 14px", fontSize: 12 }}
+                  >
+                    <IconSpark size={13} /> TIP CREATOR
+                  </a>
+                )}
               </div>
             </div>
           </div>
@@ -255,7 +287,46 @@ export function GameDetailClient({
           </div>
         </div>
 
-        <div style={{ marginTop: 24 }}>
+        {/* Related Free Games Shelf (Internal Linking + Retention) */}
+        {relatedGames.length > 0 && (
+          <section style={{ marginTop: 36 }}>
+            <div className="section-bar">
+              <div>
+                <div className="section-index">NEXT CABINET // ZERO DOWNLOADS</div>
+                <h2 className="section-heading">MORE FREE GAMES TO PLAY NEXT</h2>
+              </div>
+              <Link href="/" className="btn-steel font-mono" style={{ padding: "8px 14px", fontSize: 11, textDecoration: "none" }}>
+                ALL GAMES →
+              </Link>
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 18 }}>
+              {relatedGames.map((rg) => (
+                <Link
+                  key={rg.id}
+                  href={`/games/${rg.slug}`}
+                  className="arcade-card"
+                  style={{ textDecoration: "none", color: "inherit", display: "block" }}
+                >
+                  <div className="arcade-card-img-wrap">
+                    <img src={rg.coverImage} alt={rg.title} className="arcade-card-img" />
+                    <div className="arcade-card-play-overlay">
+                      <span className="font-mono" style={{ fontSize: 10, padding: "3px 7px", borderRadius: 4, background: "rgba(6,7,10,0.86)", border: "1px solid rgba(0,240,212,0.5)", color: "var(--cyan)" }}>
+                        [{rg.creatorCountryCode}] {rg.category}
+                      </span>
+                      <span className="play-chip">PLAY ▶</span>
+                    </div>
+                  </div>
+                  <div style={{ padding: "14px 16px" }}>
+                    <div className="font-display" style={{ fontSize: 15, fontWeight: 700, color: "#fff" }}>{rg.title}</div>
+                    <p style={{ fontSize: 12, color: "var(--ink-muted)", margin: "6px 0 0", lineHeight: 1.5 }}>{rg.tagline}</p>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </section>
+        )}
+
+        <div style={{ marginTop: 28 }}>
           <AiToolsShelf compact />
         </div>
 

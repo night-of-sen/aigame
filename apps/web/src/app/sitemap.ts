@@ -42,5 +42,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.9
   }));
 
-  return [...staticEntries, ...gameEntries];
+  const creatorNames = Array.from(new Set(published.map((g) => g.creatorName).filter(Boolean)));
+  const creatorEntries: MetadataRoute.Sitemap = creatorNames.map((name) => ({
+    url: `${baseUrl}/u/${encodeURIComponent(name)}`,
+    lastModified: new Date(),
+    changeFrequency: "weekly",
+    priority: 0.7
+  }));
+
+  return [...staticEntries, ...gameEntries, ...creatorEntries];
 }

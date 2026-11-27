@@ -278,6 +278,21 @@ async function ensurePgReady(): Promise<boolean> {
         await sql`INSERT INTO sp_meta (key, value_int) VALUES ('cleaned_demo_data_v1', 1) ON CONFLICT (key) DO UPDATE SET value_int = 1`;
       }
 
+      // Wave 2 original playable games migration (idempotent: inserts gm-008..gm-011 if not yet present)
+      const wave2Flag = await sql<{ value_int: number }[]>`SELECT value_int FROM sp_meta WHERE key = 'seed_wave2_games_v1'`;
+      if (wave2Flag.length === 0) {
+        const seed = getDefaultStoreSnapshot();
+        const wave2 = seed.games.filter((g) => ["gm-008", "gm-009", "gm-010", "gm-011"].includes(g.id));
+        for (const g of wave2) {
+          await sql`
+            INSERT INTO sp_games (id, slug, title, title_zh, tagline, tagline_zh, translations, creator_id, creator_name, creator_country_code, play_type, category, is_ai_created, ai_tools, ai_prompt_note, cover_image, accent_color, status, total_valid_plays, plays_24h, rating, country_plays, sandbox_html, security_score, security_verdict, creator_tip_url, published_at)
+            VALUES (${g.id}, ${g.slug}, ${g.title}, ${g.titleZh}, ${g.tagline}, ${g.taglineZh}, ${sql.json((g.translations || {}) as unknown as postgres.JSONValue)}, ${g.creatorId}, ${g.creatorName}, ${g.creatorCountryCode}, ${g.playType}, ${g.category}, ${g.isAiCreated}, ${sql.json(g.aiTools)}, ${g.aiPromptNote}, ${g.coverImage}, ${g.accentColor}, ${g.status}, ${g.totalValidPlays}, ${g.plays24h}, ${g.rating}, ${sql.json(g.countryPlays)}, ${g.sandboxHtml ?? null}, ${g.securityScore}, ${g.securityVerdict}, ${g.creatorTipUrl ?? null}, ${g.publishedAt})
+            ON CONFLICT (id) DO NOTHING
+          `;
+        }
+        await sql`INSERT INTO sp_meta (key, value_int) VALUES ('seed_wave2_games_v1', 1) ON CONFLICT (key) DO UPDATE SET value_int = 1`;
+      }
+
       pgAvailable = true;
       return true;
     } catch {
