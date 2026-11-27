@@ -20,7 +20,7 @@ export function AdSenseSlot({
   label?: string;
 }) {
   const pushedRef = useRef(false);
-  const client = process.env.NEXT_PUBLIC_ADSENSE_CLIENT || "";
+  const client = process.env.NEXT_PUBLIC_ADSENSE_CLIENT || "ca-pub-9713722525832645";
   const isLive = Boolean(client && client.startsWith("ca-pub-") && slotId);
 
   useEffect(() => {
