@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { USER_SESSION_COOKIE, verifySessionToken } from "@synthplay/db";
 import { createCreemCheckoutSession, getPaymentIntegrationsStatus } from "@/lib/payments";
 
+export const dynamic = "force-dynamic";
+
 export async function GET() {
   return NextResponse.json(getPaymentIntegrationsStatus());
 }

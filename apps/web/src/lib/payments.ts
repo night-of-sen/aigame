@@ -26,8 +26,8 @@ export function inferTierFromAmount(amountUsd: number, explicitTier?: string): S
     return explicitTier;
   }
   if (amountUsd >= 250) return "diamond_b2b";
-  if (amountUsd >= 35) return "gold_patron";
-  if (amountUsd >= 5) return "pro_monthly";
+  if (amountUsd >= 29) return "gold_patron";
+  if (amountUsd >= 3) return "pro_monthly";
   return "supporter";
 }
 
@@ -116,16 +116,18 @@ export async function fulfillPaidWebhookOrder(input: FulfillPaymentInput) {
 }
 
 export function getPaymentIntegrationsStatus() {
+  const env = process.env;
   const isSet = (v?: string) => Boolean(v && !v.startsWith("your_"));
+  const readRuntime = (key: string) => (env[key] || "").trim();
   return {
-    creem: isSet(process.env.CREEM_API_KEY) && isSet(process.env.CREEM_WEBHOOK_SECRET),
-    kofi: isSet(process.env.KOFI_VERIFICATION_TOKEN),
-    patreon: isSet(process.env.PATREON_WEBHOOK_SECRET),
-    paypal: isSet(process.env.PAYPAL_CLIENT_ID) && isSet(process.env.PAYPAL_CLIENT_SECRET) && isSet(process.env.PAYPAL_WEBHOOK_ID),
+    creem: isSet(env.CREEM_API_KEY) && isSet(env.CREEM_WEBHOOK_SECRET),
+    kofi: isSet(env.KOFI_VERIFICATION_TOKEN),
+    patreon: isSet(env.PATREON_WEBHOOK_SECRET),
+    paypal: isSet(env.PAYPAL_CLIENT_ID) && isSet(env.PAYPAL_CLIENT_SECRET) && isSet(env.PAYPAL_WEBHOOK_ID),
     hostedUrls: {
-      kofi: process.env.NEXT_PUBLIC_KOFI_URL || "",
-      patreon: process.env.NEXT_PUBLIC_PATREON_URL || "",
-      paypalMe: process.env.NEXT_PUBLIC_PAYPAL_ME_URL || ""
+      kofi: readRuntime("KOFI_URL") || readRuntime("NEXT_PUBLIC_KOFI_URL"),
+      patreon: readRuntime("PATREON_URL") || readRuntime("NEXT_PUBLIC_PATREON_URL"),
+      paypalMe: readRuntime("PAYPAL_ME_URL") || readRuntime("NEXT_PUBLIC_PAYPAL_ME_URL")
     }
   };
 }
