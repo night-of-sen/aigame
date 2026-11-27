@@ -1395,24 +1395,319 @@ body.fps-cursor-active * {
   animation: modalPop 0.32s var(--ease-spring);
 }
 
-/* Responsive Breakpoints */
-@media (max-width: 1140px) {
-  .sp-header-inner {
-    flex-wrap: wrap;
-    padding: 10px 16px;
-    gap: 8px;
+/* Header Controls, Mobile/iPad Drawer & Responsive Layout */
+.sp-header-left {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  min-width: 0;
+}
+
+.sp-brand-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.sp-brand-sub {
+  font-size: 10px;
+  color: var(--volt);
+  letter-spacing: 0.1em;
+  margin-top: 2px;
+  white-space: nowrap;
+}
+
+.sp-header-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.sp-ctrl-select {
+  width: auto !important;
+  padding: 6px 10px !important;
+  font-size: 11px !important;
+  height: 34px;
+  line-height: 1;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.sp-ctrl-pill {
+  height: 34px;
+  padding: 0 11px !important;
+  font-size: 11px !important;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.sp-fps-pill {
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 11px;
+  border-radius: 6px;
+  font-size: 11px;
+  border: 1px solid rgba(0, 240, 212, 0.4);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.sp-user-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.sp-user-pill {
+  height: 34px;
+  padding: 0 12px !important;
+  font-size: 11px !important;
+  border-color: rgba(243, 255, 0, 0.45) !important;
+  color: var(--volt) !important;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.sp-user-name {
+  display: inline-block;
+  max-width: 132px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sp-signin-btn {
+  height: 34px;
+  padding: 0 14px !important;
+  font-size: 11px !important;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.sp-mobile-menu-btn {
+  display: none !important;
+  height: 34px;
+  width: 38px;
+  padding: 0 !important;
+  font-size: 16px !important;
+  justify-content: center;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.sp-mobile-drawer {
+  border-top: 1px solid rgba(0, 240, 212, 0.16);
+  background: rgba(7, 9, 14, 0.98);
+  padding: 16px 18px 18px;
+  display: grid;
+  gap: 14px;
+  animation: modalPop 0.2s var(--ease-spring);
+}
+
+.sp-mobile-nav-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.sp-mobile-nav-item {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--ink);
+  font-family: var(--font-display), sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.sp-mobile-nav-item.active {
+  background: rgba(243, 255, 0, 0.14);
+  border-color: var(--volt);
+  color: var(--volt);
+}
+
+.sp-mobile-drawer-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.led-strip-inner {
+  max-width: 1400px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: minmax(0, 1.8fr) minmax(300px, 0.9fr);
+  align-items: center;
+}
+
+.led-strip-marquee-wrap {
+  overflow: hidden;
+  padding: 13px 0;
+  border-right: 1px solid var(--hairline);
+}
+
+.led-strip-funding {
+  padding: 10px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.country-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 28px;
+}
+
+/* Touch devices: always show Play chip on cards and keep scrolling smooth */
+@media (hover: none) {
+  .play-chip {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  .arcade-card:hover {
+    transform: none;
   }
 }
 
-@media (max-width: 1080px) {
-  .hero-grid { grid-template-columns: 1fr; }
-  .hero-dock { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  .arcade-main-grid { grid-template-columns: 1fr; }
+/* Responsive Breakpoints */
+/* Small Desktop / iPad Landscape (<= 1240px): tuck GPU/FPS into drawer so navbar stays spacious on 1 single line */
+@media (max-width: 1240px) {
+  .sp-desktop-only-ctrl {
+    display: none !important;
+  }
+  .sp-header-left {
+    gap: 14px;
+  }
 }
 
+/* iPad Portrait & Smaller Tablets (<= 1024px): show clean mobile drawer button */
+@media (max-width: 1024px) {
+  .sp-nav {
+    display: none !important;
+  }
+  .sp-mobile-menu-btn {
+    display: inline-flex !important;
+  }
+  .hero-grid {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+  .hero-dock {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .arcade-main-grid {
+    grid-template-columns: 1fr;
+  }
+  .arcade-main-grid aside {
+    position: static !important;
+  }
+  .led-strip-inner {
+    grid-template-columns: 1fr;
+  }
+  .led-strip-marquee-wrap {
+    border-right: 0;
+    border-bottom: 1px solid var(--hairline);
+  }
+}
+
+/* Mobile Phones (<= 680px) */
 @media (max-width: 680px) {
-  .sp-nav { display: none; }
-  .catalog-grid { grid-template-columns: 1fr; }
-  .hero-dock { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .live-pulse-toast { display: none; }
+  .sp-header-inner {
+    min-height: 60px;
+    padding: 0 12px;
+    gap: 8px;
+  }
+  .sp-logo-mark {
+    width: 34px;
+    height: 34px;
+    border-radius: 7px;
+  }
+  .sp-brand-sub {
+    display: none;
+  }
+  .sp-tablet-up-ctrl {
+    display: none !important;
+  }
+  .sp-header-controls {
+    gap: 6px;
+  }
+  .sp-ctrl-select {
+    max-width: 92px;
+    padding: 4px 6px !important;
+    font-size: 10px !important;
+  }
+  .sp-user-name {
+    max-width: 78px;
+  }
+  .sp-container {
+    padding: 0 14px;
+  }
+  .hero-stage {
+    min-height: auto;
+  }
+  .hero-content {
+    padding: 26px 14px 20px;
+  }
+  .hero-title {
+    font-size: clamp(1.9rem, 9vw, 2.7rem);
+    margin: 10px 0 12px;
+  }
+  .hero-dock {
+    margin-top: 22px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .dock-thumb {
+    height: 48px;
+  }
+  .led-strip-funding {
+    padding: 10px 14px;
+    gap: 10px;
+  }
+  .country-bar {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding-bottom: 6px;
+    margin-bottom: 20px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .country-bar::-webkit-scrollbar {
+    display: none;
+  }
+  .country-btn {
+    white-space: nowrap;
+    flex-shrink: 0;
+    padding: 7px 11px;
+    font-size: 11px;
+  }
+  .catalog-grid {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+  .modal-backdrop {
+    padding: 8px;
+  }
+  .live-pulse-toast {
+    display: none;
+  }
 }

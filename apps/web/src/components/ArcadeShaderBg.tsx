@@ -248,8 +248,10 @@ export function ArcadeShaderBg({ accentHex, paused, quality, onFps }: ArcadeShad
       }
     };
 
+    const isTouchOnly = window.matchMedia?.("(hover: none) and (pointer: coarse)").matches ?? false;
+
     const onPointerMove = (e: PointerEvent) => {
-      if (e.pointerType === "touch") {
+      if (e.pointerType === "touch" || isTouchOnly) {
         mouse.visible = false;
         document.body.classList.remove("fps-cursor-active");
         return;
@@ -261,10 +263,12 @@ export function ArcadeShaderBg({ accentHex, paused, quality, onFps }: ArcadeShad
     };
 
     const onMouseMove = (e: MouseEvent) => {
+      if (isTouchOnly) return;
       handleMove(e.clientX, e.clientY, e.target);
     };
 
     const onDown = (e: MouseEvent) => {
+      if (isTouchOnly) return;
       handleMove(e.clientX, e.clientY, e.target);
       pulse = 1.0;
       mouse.recoil = 24;

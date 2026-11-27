@@ -47,6 +47,13 @@ export function SynthPlayApp({ initial }: { initial: InitialData }) {
 
   const [currentUser, setCurrentUser] = useState<AuthUserSummary | null>(initial.currentUser);
   const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.matchMedia?.("(pointer: coarse)").matches) {
+      setQuality("balanced");
+    }
+  }, []);
 
   const [games, setGames] = useState<GameRecord[]>(initial.games);
   const [topPlayed, setTopPlayed] = useState<GameRecord[]>(initial.topPlayed);
@@ -104,6 +111,7 @@ export function SynthPlayApp({ initial }: { initial: InitialData }) {
 
   // Switch page view with snappy Cyberpunk Laser Shutter transition
   const navigateView = (nextView: "arcade" | "studio" | "dashboard" | "sponsor", label: string) => {
+    setMobileMenuOpen(false);
     if (nextView === view) return;
     arcadeAudio.playSwitch();
     setShutter({ active: true, label });
@@ -218,7 +226,7 @@ export function SynthPlayApp({ initial }: { initial: InitialData }) {
       {/* Sticky Hardware Navigation Header */}
       <header className="sp-header">
         <div className="sp-header-inner">
-          <div style={{ display: "flex", alignItems: "center", gap: 28 }}>
+          <div className="sp-header-left">
             <button
               type="button"
               className="sp-brand"
@@ -229,16 +237,16 @@ export function SynthPlayApp({ initial }: { initial: InitialData }) {
                 <img
                   src="/brand-logo.png"
                   alt="SYNTHPLAY"
-                  width={38}
-                  height={38}
+                  width={40}
+                  height={40}
                   style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
                 />
               </div>
-              <div>
-                <div className="font-display" style={{ fontSize: 19, fontWeight: 700, lineHeight: 1, color: "#fff" }}>
+              <div className="sp-brand-text">
+                <div className="font-display" style={{ fontSize: 18, fontWeight: 700, lineHeight: 1, color: "#fff" }}>
                   SYNTHPLAY
                 </div>
-                <div className="font-mono" style={{ fontSize: 10, color: "var(--volt)", letterSpacing: "0.1em", marginTop: 2 }}>
+                <div className="font-mono sp-brand-sub">
                   SYNTHPLAY.GAMES // FREE AI ARCADE
                 </div>
               </div>
@@ -285,52 +293,42 @@ export function SynthPlayApp({ initial }: { initial: InitialData }) {
             </nav>
           </div>
 
-          {/* Right Controls: Locale, SFX, Quality Tier, Live GPU Telemetry */}
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <div style={{ display: "flex", border: "1px solid var(--hairline)", borderRadius: 6, overflow: "hidden" }}>
+          {/* Right Controls: Compact Language Dropdown, SFX, GPU/FPS (wide desktop), Account, Mobile Drawer Toggle */}
+          <div className="sp-header-controls">
+            <select
+              aria-label="Language"
+              value={locale}
+              onChange={(e) => {
+                const next = e.target.value as Locale;
+                arcadeAudio.playSwitch();
+                setLocale(next);
+                document.cookie = `synthplay_locale=${next}; path=/; max-age=31536000; samesite=lax`;
+              }}
+              className="sp-select sp-ctrl-select font-mono"
+            >
               {SUPPORTED_LOCALES.map((l) => (
-                <button
-                  key={l.code}
-                  type="button"
-                  onClick={() => {
-                    arcadeAudio.playSwitch();
-                    setLocale(l.code);
-                    document.cookie = `synthplay_locale=${l.code}; path=/; max-age=31536000; samesite=lax`;
-                  }}
-                  className="font-mono"
-                  style={{
-                    padding: "5px 8px",
-                    fontSize: 11,
-                    border: 0,
-                    cursor: "pointer",
-                    background: locale === l.code ? "var(--volt)" : "transparent",
-                    color: locale === l.code ? "#07080b" : "var(--ink-muted)",
-                    fontWeight: locale === l.code ? 700 : 400,
-                    transition: "all 0.15s ease"
-                  }}
-                >
-                  {l.label}
-                </button>
+                <option key={l.code} value={l.code}>
+                  {l.label} · {l.native}
+                </option>
               ))}
-            </div>
+            </select>
 
             <button
               type="button"
               onClick={toggleSfx}
-              className="btn-steel font-mono"
-              style={{ padding: "6px 10px", fontSize: 11, color: sfxOn ? "var(--volt)" : "var(--ink-muted)" }}
+              className="btn-steel sp-ctrl-pill sp-tablet-up-ctrl font-mono"
+              style={{ color: sfxOn ? "var(--volt)" : "var(--ink-muted)" }}
               title="Arcade Web Audio SFX"
             >
               <IconVolume on={sfxOn} size={14} />
-              <span>{sfxOn ? t(locale, "audioOn") : t(locale, "audioOff")}</span>
+              <span>{sfxOn ? "SFX ON" : "SFX"}</span>
             </button>
 
             <select
               aria-label="Graphics Quality Tier"
               value={quality}
               onChange={(e) => setQuality(e.target.value as "ultra" | "balanced" | "lite")}
-              className="sp-select font-mono"
-              style={{ width: "auto", padding: "6px 10px", fontSize: 11 }}
+              className="sp-select sp-ctrl-select sp-desktop-only-ctrl font-mono"
             >
               <option value="ultra">GPU: ULTRA</option>
               <option value="balanced">GPU: BALANCED</option>
@@ -338,38 +336,31 @@ export function SynthPlayApp({ initial }: { initial: InitialData }) {
             </select>
 
             <div
-              className="font-mono"
+              className="sp-fps-pill sp-desktop-only-ctrl font-mono"
               style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 6,
-                padding: "6px 10px",
-                borderRadius: 6,
-                fontSize: 11,
-                border: `1px solid ${activeGame ? "var(--amber)" : "rgba(0,240,212,0.4)"}`,
+                borderColor: activeGame ? "var(--amber)" : "rgba(0,240,212,0.4)",
                 background: activeGame ? "rgba(255,159,28,0.12)" : "rgba(0,240,212,0.08)",
                 color: activeGame ? "var(--amber)" : "var(--cyan)",
                 boxShadow: activeGame ? "none" : "0 0 14px rgba(0,240,212,0.15)"
               }}
             >
               <IconCpu size={13} />
-              <span>{activeGame ? "BG PAUSED" : `${fps} FPS`}</span>
+              <span>{activeGame ? "PAUSED" : `${fps} FPS`}</span>
             </div>
 
             {currentUser ? (
-              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <div className="sp-user-group">
                 <button
                   type="button"
-                  className="btn-steel font-mono"
-                  style={{ padding: "6px 10px", fontSize: 11, borderColor: "rgba(243,255,0,0.45)", color: "var(--volt)" }}
+                  className="btn-steel sp-user-pill font-mono"
                   onClick={() => navigateView("dashboard", "CREATOR STUDIO")}
+                  title={`@${currentUser.username} [${currentUser.countryCode}]`}
                 >
-                  <span>@{currentUser.username} [{currentUser.countryCode}]</span>
+                  <span className="sp-user-name">@{currentUser.username}</span>
                 </button>
                 <button
                   type="button"
-                  className="btn-steel font-mono"
-                  style={{ padding: "6px 8px", fontSize: 10 }}
+                  className="btn-steel sp-ctrl-pill sp-tablet-up-ctrl font-mono"
                   onClick={async () => {
                     await fetch("/api/auth/logout", { method: "POST" });
                     setCurrentUser(null);
@@ -381,15 +372,114 @@ export function SynthPlayApp({ initial }: { initial: InitialData }) {
             ) : (
               <button
                 type="button"
-                className="btn-volt"
-                style={{ padding: "7px 14px", fontSize: 11 }}
+                className="btn-volt sp-signin-btn"
                 onClick={() => setAuthModalOpen(true)}
               >
                 <span>{t(locale, "authSignInBtn")}</span>
               </button>
             )}
+
+            <button
+              type="button"
+              className="btn-steel sp-mobile-menu-btn font-mono"
+              aria-label="Toggle navigation menu"
+              aria-expanded={mobileMenuOpen}
+              onClick={() => {
+                arcadeAudio.playSwitch();
+                setMobileMenuOpen((v) => !v);
+              }}
+            >
+              <span>{mobileMenuOpen ? "✕" : "☰"}</span>
+            </button>
           </div>
         </div>
+
+        {/* Responsive iPad & Mobile Navigation Drawer */}
+        {mobileMenuOpen && (
+          <div className="sp-mobile-drawer">
+            <div className="sp-mobile-nav-grid">
+              <button
+                type="button"
+                className={`sp-mobile-nav-item ${view === "arcade" ? "active" : ""}`}
+                onClick={() => navigateView("arcade", "ARCADE HALL")}
+              >
+                {t(locale, "navArcade")}
+              </button>
+              <button
+                type="button"
+                className={`sp-mobile-nav-item ${view === "studio" ? "active" : ""}`}
+                onClick={() => navigateView("studio", "UPLOAD BAY")}
+              >
+                {t(locale, "navStudio")}
+              </button>
+              <button
+                type="button"
+                className={`sp-mobile-nav-item ${view === "dashboard" ? "active" : ""}`}
+                onClick={() => navigateView("dashboard", "CREATOR STUDIO")}
+              >
+                {t(locale, "navDashboard")}
+              </button>
+              <button
+                type="button"
+                className={`sp-mobile-nav-item ${view === "sponsor" ? "active" : ""}`}
+                onClick={() => navigateView("sponsor", "SPONSOR HUB")}
+              >
+                {t(locale, "navSponsor")}
+              </button>
+              <a
+                href={process.env.NEXT_PUBLIC_ADMIN_DOMAIN || "http://localhost:3001"}
+                target="_blank"
+                rel="noreferrer"
+                className="sp-mobile-nav-item"
+                style={{ color: "var(--cyan)" }}
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                {t(locale, "navAdmin")} ↗
+              </a>
+              {currentUser && (
+                <button
+                  type="button"
+                  className="sp-mobile-nav-item"
+                  style={{ color: "var(--vermilion)" }}
+                  onClick={async () => {
+                    await fetch("/api/auth/logout", { method: "POST" });
+                    setCurrentUser(null);
+                    setMobileMenuOpen(false);
+                  }}
+                >
+                  SIGN OUT (@{currentUser.username})
+                </button>
+              )}
+            </div>
+
+            <div className="sp-mobile-drawer-tools font-mono">
+              <button
+                type="button"
+                onClick={toggleSfx}
+                className="btn-steel sp-ctrl-pill"
+                style={{ color: sfxOn ? "var(--volt)" : "var(--ink-muted)" }}
+              >
+                <IconVolume on={sfxOn} size={14} />
+                <span>{sfxOn ? t(locale, "audioOn") : t(locale, "audioOff")}</span>
+              </button>
+
+              <select
+                aria-label="Graphics Quality Tier"
+                value={quality}
+                onChange={(e) => setQuality(e.target.value as "ultra" | "balanced" | "lite")}
+                className="sp-select sp-ctrl-select font-mono"
+              >
+                <option value="ultra">GPU: ULTRA</option>
+                <option value="balanced">GPU: BALANCED</option>
+                <option value="lite">GPU: LITE</option>
+              </select>
+
+              <span style={{ color: "var(--cyan)", fontSize: 11 }}>
+                {activeGame ? "BG PAUSED" : `${fps} FPS`}
+              </span>
+            </div>
+          </div>
+        )}
       </header>
 
       {/* ACTIVE VIEW ROUTER */}
@@ -553,8 +643,8 @@ export function SynthPlayApp({ initial }: { initial: InitialData }) {
 
           {/* SPONSOR SHOWCASE SLOT #1: INDUSTRIAL LED MARQUEE + PLASMA FUNDING METER */}
           <div className="led-strip">
-            <div style={{ maxWidth: 1400, margin: "0 auto", display: "grid", gridTemplateColumns: "minmax(0, 1.8fr) minmax(300px, 0.9fr)", alignItems: "center" }}>
-              <div style={{ overflow: "hidden", padding: "13px 0", borderRight: "1px solid var(--hairline)" }}>
+            <div className="led-strip-inner">
+              <div className="led-strip-marquee-wrap">
                 <div className="led-marquee">
                   {marqueeSponsors.length > 0
                     ? [...marqueeSponsors, ...marqueeSponsors, ...marqueeSponsors].map((sp, i) => (
@@ -610,11 +700,11 @@ export function SynthPlayApp({ initial }: { initial: InitialData }) {
               </div>
 
               {/* Monthly Edge CDN & AI Game Jam Plasma Funding Bar */}
-              <div style={{ padding: "10px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 14 }}>
-                <div style={{ flex: 1 }}>
-                  <div className="font-mono" style={{ display: "flex", justifyContent: "space-between", fontSize: 10, marginBottom: 6 }}>
-                    <span style={{ color: "var(--ink-muted)" }}>{t(locale, "fundingTitle")}</span>
-                    <span style={{ color: "var(--volt)", fontWeight: 700 }}>${fundingRaised} / ${fundingGoal} ({fundingPct}%)</span>
+              <div className="led-strip-funding">
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div className="font-mono" style={{ display: "flex", justifyContent: "space-between", gap: 8, fontSize: 10, marginBottom: 6 }}>
+                    <span style={{ color: "var(--ink-muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{t(locale, "fundingTitle")}</span>
+                    <span style={{ color: "var(--volt)", fontWeight: 700, whiteSpace: "nowrap" }}>${fundingRaised} / ${fundingGoal} ({fundingPct}%)</span>
                   </div>
                   <div style={{ height: 7, borderRadius: 99, background: "#1a1f2e", overflow: "hidden" }}>
                     <div className="plasma-bar-fill" style={{ width: `${fundingPct}%` }} />
@@ -623,7 +713,7 @@ export function SynthPlayApp({ initial }: { initial: InitialData }) {
                 <button
                   type="button"
                   className="btn-steel font-mono"
-                  style={{ padding: "6px 12px", fontSize: 11, flexShrink: 0 }}
+                  style={{ padding: "6px 12px", fontSize: 11, flexShrink: 0, whiteSpace: "nowrap" }}
                   onClick={() => navigateView("sponsor", "SPONSOR HUB")}
                 >
                   <span>{t(locale, "fundingAction")}</span>
@@ -708,7 +798,7 @@ export function SynthPlayApp({ initial }: { initial: InitialData }) {
               )}
             </div>
 
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 28 }}>
+            <div className="country-bar">
               {COUNTRIES.map((c) => (
                 <button
                   key={c.code}
