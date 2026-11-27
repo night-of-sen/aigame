@@ -281,7 +281,7 @@ export function ArcadeCabinetModal({
                 <IconSpark size={14} /> PRO SUPPORTER / SPONSOR SLOT
               </div>
               <div style={{ fontSize: 12, color: "var(--ink-muted)" }}>
-                Ad-free cabinets · Patron Wall · Creem / PayPal / Ko-fi
+                Ad-free cabinets ($3/mo) · Support via Patreon or Ko-fi
               </div>
             </div>
             <button

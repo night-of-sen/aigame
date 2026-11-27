@@ -6,6 +6,7 @@ import type { GameRecord, ReviewRecord } from "@synthplay/db";
 import { ArcadeCabinetModal } from "./ArcadeCabinetModal";
 import { AdSenseSlot } from "./AdSenseSlot";
 import { TurnstileWidget } from "./TurnstileWidget";
+import { AiToolsShelf } from "./AiToolsShelf";
 import { IconPlay, IconShield, IconSpark } from "./Icons";
 
 export function GameDetailClient({
@@ -221,6 +222,10 @@ export function GameDetailClient({
               )}
             </div>
           </div>
+        </div>
+
+        <div style={{ marginTop: 24 }}>
+          <AiToolsShelf compact />
         </div>
 
         <AdSenseSlot

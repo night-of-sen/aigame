@@ -260,6 +260,24 @@ async function ensurePgReady(): Promise<boolean> {
         await sql`INSERT INTO sp_meta (key, value_int) VALUES ('monthly_raised_usd', ${seed.monthlyFundingRaisedUsd}) ON CONFLICT (key) DO NOTHING`;
       }
 
+      // One-time cleanup migration for live production DB: remove initial seeded placeholder metrics/sponsors/reviews
+      // while preserving real Google accounts, real uploaded games, and AI translations.
+      const cleanedFlag = await sql<{ value_int: number }[]>`SELECT value_int FROM sp_meta WHERE key = 'cleaned_demo_data_v1'`;
+      if (cleanedFlag.length === 0) {
+        await sql`
+          UPDATE sp_games
+          SET total_valid_plays = 0, plays_24h = 0, country_plays = '{}'::jsonb, rating = 5.0
+          WHERE id IN ('gm-001', 'gm-002', 'gm-003', 'gm-004', 'gm-005', 'gm-006')
+            AND total_valid_plays > 10000
+        `;
+        await sql`DELETE FROM sp_reviews WHERE id IN ('rev-001', 'rev-002')`;
+        await sql`DELETE FROM sp_sponsor_slots WHERE id IN ('sp-01', 'sp-02', 'sp-03', 'sp-04', 'sp-05')`;
+        await sql`DELETE FROM sp_sponsor_orders WHERE id IN ('ord-1001', 'ord-1002', 'ord-1003', 'ord-1004', 'ord-1005')`;
+        await sql`INSERT INTO sp_meta (key, value_int) VALUES ('monthly_goal_usd', 50) ON CONFLICT (key) DO UPDATE SET value_int = 50`;
+        await sql`INSERT INTO sp_meta (key, value_int) VALUES ('monthly_raised_usd', 0) ON CONFLICT (key) DO UPDATE SET value_int = 0`;
+        await sql`INSERT INTO sp_meta (key, value_int) VALUES ('cleaned_demo_data_v1', 1) ON CONFLICT (key) DO UPDATE SET value_int = 1`;
+      }
+
       pgAvailable = true;
       return true;
     } catch {

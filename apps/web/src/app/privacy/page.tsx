@@ -82,9 +82,9 @@ export default function PrivacyPolicyPage() {
             <p style={{ margin: 0 }}>
               User-uploaded HTML5 games run inside sandboxed iframes served from an isolated domain (
               <code>synthplay-box.cloud</code>) so third-party game scripts cannot access your{" "}
-              <code>synthplay.games</code> session cookies. Optional third-party payment or sponsorship partners (such as
-              Creem, Ko-fi, Patreon, PayPal) and advertising partners (such as Google AdSense) process transactions or
-              ads under their own privacy policies.
+              <code>synthplay.games</code> session cookies. Optional third-party community support platforms (such as
+              Ko-fi, Patreon, and PayPal), affiliate tool links, and advertising partners (such as Google AdSense, which
+              may use cookies to serve relevant ads) operate under their own privacy policies.
             </p>
           </section>
 
@@ -95,8 +95,8 @@ export default function PrivacyPolicyPage() {
             <p style={{ margin: 0 }}>
               You may request export or permanent deletion of your SYNTHPLAY account and associated personal data at any
               time by contacting{" "}
-              <a href="mailto:sesenight@gmail.com" style={{ color: "#00F0D4" }}>
-                sesenight@gmail.com
+              <a href="mailto:support@synthplay.games" style={{ color: "#00F0D4" }}>
+                support@synthplay.games
               </a>
               . We respond to deletion requests within 14 business days.
             </p>

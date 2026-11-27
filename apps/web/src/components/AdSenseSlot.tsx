@@ -93,7 +93,7 @@ export function AdSenseSlot({
           style={{ padding: "6px 12px", fontSize: 11 }}
           onClick={onOpenSponsor}
         >
-          GO AD-FREE ($5 PRO) / BOOK THIS SLOT →
+          GO AD-FREE ($3/MO SUPPORTER) / FEATURE YOUR GAME →
         </button>
       )}
     </div>

@@ -37,15 +37,6 @@ interface InitialData {
   currentUser: AuthUserSummary | null;
 }
 
-const LIVE_PULSE_FEED = [
-  { city: "TOKYO", cc: "JP", msg: "BOOTED WANGAN VOLT DRIFT · 284 KM/H" },
-  { city: "SEOUL", cc: "KR", msg: "CLEARED IRON GRID SECTOR 09" },
-  { city: "SHANGHAI", cc: "CN", msg: "SOLVED RAMEN ALLEY 2099 AI CASE" },
-  { city: "SÃO PAULO", cc: "BR", msg: "NEW COMBO x18 ON CRIMSON DANMAKU" },
-  { city: "SAN FRANCISCO", cc: "US", msg: "DEPLOYED SINGLE-HTML AI GAME IN 8s" },
-  { city: "BERLIN", cc: "DE", msg: "BACKED SYNTHPLAY PRO SUPPORTER" }
-];
-
 export function SynthPlayApp({ initial }: { initial: InitialData }) {
   const [view, setView] = useState<"arcade" | "studio" | "dashboard" | "sponsor">("arcade");
   const [shutter, setShutter] = useState<{ active: boolean; label: string }>({ active: false, label: "" });
@@ -79,7 +70,6 @@ export function SynthPlayApp({ initial }: { initial: InitialData }) {
   const [hoverAccent, setHoverAccent] = useState<string | null>(null);
   const [hoveredCardId, setHoveredCardId] = useState<string | null>(null);
   const [activeGame, setActiveGame] = useState<GameRecord | null>(null);
-  const [pulseIdx, setPulseIdx] = useState(0);
 
   useEffect(() => {
     const q = searchQuery.trim();
@@ -134,13 +124,6 @@ export function SynthPlayApp({ initial }: { initial: InitialData }) {
     }, 7000);
     return () => clearInterval(timer);
   }, [view, activeGame, featuredList.length, heroIdx, triggerHeroSwitch]);
-
-  // Cycle floating Live Global Play Pulse notifications
-  useEffect(() => {
-    if (activeGame) return;
-    const tmr = setInterval(() => setPulseIdx((p) => (p + 1) % LIVE_PULSE_FEED.length), 5200);
-    return () => clearInterval(tmr);
-  }, [activeGame]);
 
   const refreshData = useCallback(async (selectedCountry = country) => {
     setIsSyncing(true);
@@ -217,7 +200,6 @@ export function SynthPlayApp({ initial }: { initial: InitialData }) {
   const fundingPct = Math.min(100, Math.round((fundingRaised / Math.max(1, fundingGoal)) * 100));
 
   const activeAccent = hoverAccent || heroGame?.accentColor || "#F3FF00";
-  const currentPulse = LIVE_PULSE_FEED[pulseIdx];
 
   return (
     <div style={{ minHeight: "100vh", position: "relative" }}>
@@ -566,25 +548,56 @@ export function SynthPlayApp({ initial }: { initial: InitialData }) {
             <div style={{ maxWidth: 1400, margin: "0 auto", display: "grid", gridTemplateColumns: "minmax(0, 1.8fr) minmax(300px, 0.9fr)", alignItems: "center" }}>
               <div style={{ overflow: "hidden", padding: "13px 0", borderRight: "1px solid var(--hairline)" }}>
                 <div className="led-marquee">
-                  {[...marqueeSponsors, ...marqueeSponsors, ...marqueeSponsors].map((sp, i) => (
-                    <a
-                      key={`${sp.id}-${i}`}
-                      href={sp.targetUrl}
-                      onClick={(e) => {
-                        e.preventDefault();
-                        navigateView("sponsor", "SPONSOR HUB");
-                      }}
-                      className="font-mono"
-                      style={{ display: "inline-flex", alignItems: "center", gap: 12, padding: "0 28px", fontSize: 12, whiteSpace: "nowrap" }}
-                    >
-                      <span style={{ padding: "2px 7px", borderRadius: 4, background: "var(--volt)", color: "#07080b", fontWeight: 700, fontSize: 10 }}>
-                        {sp.badgeLabel}
-                      </span>
-                      <strong style={{ color: "#fff" }}>{sp.brandName}</strong>
-                      <span style={{ color: "var(--ink-muted)" }}>{sp.tagline}</span>
-                      <span style={{ color: "var(--vermilion)" }}>///</span>
-                    </a>
-                  ))}
+                  {marqueeSponsors.length > 0
+                    ? [...marqueeSponsors, ...marqueeSponsors, ...marqueeSponsors].map((sp, i) => (
+                        <a
+                          key={`${sp.id}-${i}`}
+                          href={sp.targetUrl}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            navigateView("sponsor", "SPONSOR HUB");
+                          }}
+                          className="font-mono"
+                          style={{ display: "inline-flex", alignItems: "center", gap: 12, padding: "0 28px", fontSize: 12, whiteSpace: "nowrap" }}
+                        >
+                          <span style={{ padding: "2px 7px", borderRadius: 4, background: "var(--volt)", color: "#07080b", fontWeight: 700, fontSize: 10 }}>
+                            {sp.badgeLabel}
+                          </span>
+                          <strong style={{ color: "#fff" }}>{sp.brandName}</strong>
+                          <span style={{ color: "var(--ink-muted)" }}>{sp.tagline}</span>
+                          <span style={{ color: "var(--vermilion)" }}>///</span>
+                        </a>
+                      ))
+                    : [0, 1, 2].map((repeatIdx) => (
+                        <React.Fragment key={`open-ticker-${repeatIdx}`}>
+                          <button
+                            type="button"
+                            onClick={() => navigateView("studio", "DEV STUDIO")}
+                            className="font-mono"
+                            style={{ background: "none", border: 0, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 12, padding: "0 28px", fontSize: 12, whiteSpace: "nowrap" }}
+                          >
+                            <span style={{ padding: "2px 7px", borderRadius: 4, background: "var(--cyan)", color: "#07080b", fontWeight: 700, fontSize: 10 }}>
+                              FREE HOSTING
+                            </span>
+                            <strong style={{ color: "#fff" }}>INDIE &amp; AI HTML5 ARCADE</strong>
+                            <span style={{ color: "var(--ink-muted)" }}>Upload single-file HTML5 or ZIP games 100% free on Cloudflare R2</span>
+                            <span style={{ color: "var(--vermilion)" }}>///</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => navigateView("sponsor", "SPONSOR HUB")}
+                            className="font-mono"
+                            style={{ background: "none", border: 0, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 12, padding: "0 28px", fontSize: 12, whiteSpace: "nowrap" }}
+                          >
+                            <span style={{ padding: "2px 7px", borderRadius: 4, background: "var(--volt)", color: "#07080b", fontWeight: 700, fontSize: 10 }}>
+                              OPEN SPOTLIGHT
+                            </span>
+                            <strong style={{ color: "#fff" }}>FEATURE YOUR INDIE GAME ($29 / 7 DAYS)</strong>
+                            <span style={{ color: "var(--ink-muted)" }}>Or go 100% Ad-Free Supporter ($3/mo via Patreon &amp; Ko-fi)</span>
+                            <span style={{ color: "var(--vermilion)" }}>///</span>
+                          </button>
+                        </React.Fragment>
+                      ))}
                 </div>
               </div>
 
@@ -961,26 +974,15 @@ export function SynthPlayApp({ initial }: { initial: InitialData }) {
                     cursor: "pointer"
                   }}
                 >
-                  <div className="font-mono" style={{ fontSize: 11, color: "var(--vermilion)", marginBottom: 6 }}>OPEN COMMERCIAL SLOT</div>
-                  <div className="font-display" style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>CLAIM THIS SHOWCASE CARD</div>
+                  <div className="font-mono" style={{ fontSize: 11, color: "var(--vermilion)", marginBottom: 6 }}>OPEN COMMUNITY SPOTLIGHT</div>
+                  <div className="font-display" style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>FEATURE YOUR INDIE GAME OR STUDIO</div>
                   <p style={{ fontSize: 12.5, color: "var(--ink-muted)", margin: 0 }}>
-                    Accepts Creem MoR, Ko-fi, Patreon, PayPal Invoice &amp; Payoneer B2B Billing.
+                    Feature your indie/AI game ($29/7d) or become a $3/mo Ad-Free Supporter via Ko-fi &amp; Patreon.
                   </p>
                 </div>
               </div>
             </section>
           </main>
-
-          {/* Live Global Play Pulse Toast */}
-          {!activeGame && (
-            <div key={pulseIdx} className="live-pulse-toast font-mono">
-              <span className="rec-dot" style={{ background: "var(--volt)", boxShadow: "0 0 10px var(--volt)" }} />
-              <span style={{ color: "var(--cyan)", fontWeight: 700 }}>
-                {currentPulse.city} [{currentPulse.cc}]
-              </span>
-              <span style={{ color: "var(--ink)" }}>{currentPulse.msg}</span>
-            </div>
-          )}
         </>
       )}
 
@@ -1014,9 +1016,11 @@ export function SynthPlayApp({ initial }: { initial: InitialData }) {
       <footer style={{ borderTop: "1px solid var(--hairline)", padding: "24px", position: "relative", zIndex: 10, background: "rgba(6,7,10,0.92)" }}>
         <div className="sp-container font-mono" style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", gap: 12, fontSize: 11, color: "var(--ink-muted)", padding: 0 }}>
           <span>SYNTHPLAY // SYNTHPLAY.GAMES · SANDBOX: *.SYNTHPLAY-BOX.CLOUD</span>
-          <div style={{ display: "flex", gap: 18, alignItems: "center" }}>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 18, alignItems: "center" }}>
+            <a href="/about" style={{ color: "var(--ink-muted)", textDecoration: "none" }}>ABOUT</a>
             <a href="/privacy" style={{ color: "var(--ink-muted)", textDecoration: "none" }}>PRIVACY POLICY</a>
             <a href="/terms" style={{ color: "var(--ink-muted)", textDecoration: "none" }}>TERMS OF SERVICE</a>
+            <a href="mailto:support@synthplay.games" style={{ color: "var(--cyan)", textDecoration: "none" }}>support@synthplay.games</a>
           </div>
         </div>
       </footer>

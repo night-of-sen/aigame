@@ -1,32 +1,21 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import type { PaymentProvider } from "@synthplay/db";
-import { COUNTRIES, getCountryName, type Locale, t } from "@synthplay/i18n";
+import { type Locale, t } from "@synthplay/i18n";
+import { AiToolsShelf } from "./AiToolsShelf";
 
 interface RailStatus {
-  creem: boolean;
   kofi: boolean;
   patreon: boolean;
-  paypal: boolean;
   hostedUrls: { kofi: string; patreon: string; paypalMe: string };
 }
 
 export function SponsorView({
-  locale,
-  onOrderCreated
+  locale
 }: {
   locale: Locale;
-  onOrderCreated: () => void;
+  onOrderCreated?: () => void;
 }) {
-  const [tier, setTier] = useState<"pro_monthly" | "gold_patron" | "diamond_b2b">("gold_patron");
-  const [provider, setProvider] = useState<PaymentProvider>("creem");
-  const [payerName, setPayerName] = useState("");
-  const [country, setCountry] = useState("US");
-  const [tagline, setTagline] = useState("");
-  const [targetUrl, setTargetUrl] = useState("https://");
-  const [submitting, setSubmitting] = useState(false);
-  const [done, setDone] = useState<string | null>(null);
   const [rails, setRails] = useState<RailStatus | null>(null);
 
   useEffect(() => {
@@ -36,210 +25,142 @@ export function SponsorView({
       .catch(() => {});
   }, []);
 
-  const amountMap = {
-    pro_monthly: 5,
-    gold_patron: 35,
-    diamond_b2b: 299
-  };
-
-  const submitSponsor = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSubmitting(true);
-    setDone(null);
-    try {
-      // 1. Try real live checkout rail (Creem MoR Checkout API / Hosted Ko-fi / Patreon / PayPal.me)
-      const checkoutRes = await fetch("/api/checkout", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          provider,
-          tier,
-          payerName: payerName || "NEW PATRON",
-          payerCountry: country,
-          tagline,
-          targetUrl
-        })
-      });
-      const checkout = await checkoutRes.json();
-      if (checkoutRes.ok && checkout.mode === "redirect" && checkout.checkoutUrl) {
-        window.open(checkout.checkoutUrl, "_blank", "noopener,noreferrer");
-        setDone(
-          `Live ${provider.toUpperCase()} checkout opened in new tab! Once paid, our verified webhook automatically activates your Pro badge & Showcase slot.`
-        );
-        return;
-      }
-
-      // 2. Fallback: Sandbox booking / B2B invoice reservation
-      const res = await fetch("/api/sponsors", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          payerName: payerName || "NEW PATRON",
-          payerCountry: country,
-          provider,
-          tier,
-          amountUsd: amountMap[tier],
-          tagline: tagline || "Backing free global AI indie games on SYNTHPLAY.",
-          targetUrl
-        })
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setDone(
-          `Order ${data.orderId} recorded ($${amountMap[tier]} via ${provider.toUpperCase()}). Showcase Hall & Admin Ledger updated live!`
-        );
-        onOrderCreated();
-      }
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const isSelectedRailLive =
-    (provider === "creem" && Boolean(rails?.creem)) ||
-    (provider === "kofi" && Boolean(rails?.hostedUrls.kofi)) ||
-    (provider === "patreon" && Boolean(rails?.hostedUrls.patreon)) ||
-    (provider === "paypal" && Boolean(rails?.hostedUrls.paypalMe));
+  const kofiUrl = rails?.hostedUrls?.kofi || "";
+  const patreonUrl = rails?.hostedUrls?.patreon || "";
+  const supportMailto = "mailto:support@synthplay.games?subject=SYNTHPLAY%20Featured%20Indie%20Game%20Spotlight";
 
   return (
     <section className="sp-container" style={{ paddingTop: 32, paddingBottom: 64 }}>
       <div className="section-bar">
         <div>
-          <div className="section-index">04 // MONETIZATION &amp; SPONSOR SHOWCASE SLOTS</div>
+          <div className="section-index">04 // SUPPORT FREE HOSTING &amp; FEATURE YOUR INDIE GAME</div>
           <h1 className="section-heading">{t(locale, "sponsorPageTitle")}</h1>
-          <p style={{ color: "var(--ink-muted)", fontSize: 14, marginTop: 6 }}>
-            Tailored for Mainland Business PayPal + Payoneer USD + Creem MoR + Ko-fi + Patreon with automated webhook fulfillment.
+          <p style={{ color: "var(--ink-muted)", fontSize: 14, marginTop: 6, maxWidth: 680, lineHeight: 1.6 }}>
+            SYNTHPLAY is 100% free for players and indie developers — zero upload fees and 0% cut on creator tips.
+            Optional community support on Ko-fi &amp; Patreon keeps our global Cloudflare R2 edge servers running fast.
           </p>
         </div>
-        {rails && (
-          <div className="font-mono" style={{ display: "flex", flexWrap: "wrap", gap: 6, fontSize: 10 }}>
-            {(
-              [
-                ["CREEM", rails.creem],
-                ["KO-FI", rails.kofi],
-                ["PATREON", rails.patreon],
-                ["PAYPAL", rails.paypal]
-              ] as Array<[string, boolean]>
-            ).map(([label, live]) => (
-              <span
-                key={label}
-                style={{
-                  padding: "3px 8px",
-                  border: `1px solid ${live ? "var(--cyan)" : "var(--hairline)"}`,
-                  color: live ? "var(--cyan)" : "var(--ink-muted)"
-                }}
-              >
-                {label}: {live ? "WEBHOOK LIVE" : "STANDBY"}
-              </span>
-            ))}
-          </div>
-        )}
       </div>
 
-      {/* 3 Tiers */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 18, marginBottom: 28 }}>
-        {[
-          {
-            key: "pro_monthly" as const,
-            title: "PRO SUPPORTER",
-            price: "$5 / MO",
-            rail: "Creem MoR (Global Card / Apple Pay) or Patreon (-> Payoneer)",
-            perks: ["Ad-free arcade cabinets", "Supporter Wall country badge", "Unlimited cloud saves & 300MB upload cap"]
-          },
-          {
-            key: "gold_patron" as const,
-            title: "GOLD PATRON SHOWCASE",
-            price: "$35 / SLOT",
-            rail: "Ko-fi (0% tip fee -> Business PayPal) or PayPal Checkout",
-            perks: ["Dedicated Hall of Patrons glowing card", "Custom slogan + outbound backlink", "Permanent Gold Patron profile badge"]
-          },
-          {
-            key: "diamond_b2b" as const,
-            title: "DIAMOND B2B & JAM TITLE",
-            price: "$299 / MO",
-            rail: "PayPal Business Invoice or Payoneer Billing Service",
-            perks: ["Top Hero LED Marquee global exposure", "Hall of Patrons Diamond spotlight", "Monthly 48H AI Game Jam title branding + commercial invoice"]
-          }
-        ].map((card) => (
-          <div
-            key={card.key}
-            onClick={() => setTier(card.key)}
-            className="cab-surface cab-chamfer"
-            style={{
-              padding: 22,
-              cursor: "pointer",
-              borderColor: tier === card.key ? "var(--volt)" : "var(--hairline)",
-              boxShadow: tier === card.key ? "0 0 28px rgba(243,255,0,0.18)" : "none"
-            }}
-          >
-            <div className="font-mono" style={{ fontSize: 11, color: "var(--volt)" }}>{card.title}</div>
-            <div className="font-display" style={{ fontSize: 30, fontWeight: 700, margin: "8px 0" }}>{card.price}</div>
-            <div className="font-mono" style={{ fontSize: 11, color: "var(--cyan)", marginBottom: 14 }}>{card.rail}</div>
-            <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13, color: "var(--ink-muted)", display: "grid", gap: 6 }}>
-              {card.perks.map((p) => <li key={p}>{p}</li>)}
+      {/* 3 Clean Community & Indie Dev Tiers (Ko-fi + Patreon only — zero Creem, zero fake simulated checkout) */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(270px, 1fr))", gap: 18, marginBottom: 28 }}>
+        {/* Tier 1: Coffee Tip via Ko-fi */}
+        <div className="cab-surface cab-chamfer" style={{ padding: 24, display: "flex", flexDirection: "column", justifyContent: "space-between", gap: 18 }}>
+          <div>
+            <div className="font-mono" style={{ fontSize: 11, color: "var(--cyan)" }}>ONE-TIME COMMUNITY TIP</div>
+            <div className="font-display" style={{ fontSize: 30, fontWeight: 700, margin: "8px 0" }}>
+              BUY A COFFEE
+            </div>
+            <div className="font-mono" style={{ fontSize: 11, color: "var(--ink-muted)", marginBottom: 14 }}>
+              Via Ko-fi · 0% platform cut · Cards &amp; PayPal (no account required)
+            </div>
+            <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13, color: "var(--ink-muted)", display: "grid", gap: 8 }}>
+              <li>Directly funds monthly VPS &amp; domain renewals</li>
+              <li>Leave a shoutout message for the community</li>
+              <li>Zero recurring commitment</li>
             </ul>
           </div>
-        ))}
+          {kofiUrl ? (
+            <a href={kofiUrl} target="_blank" rel="noopener noreferrer" className="btn-steel" style={{ textAlign: "center", justifyContent: "center" }}>
+              TIP ON KO-FI →
+            </a>
+          ) : (
+            <a href={supportMailto} className="btn-steel" style={{ textAlign: "center", justifyContent: "center" }}>
+              KO-FI OPENING SOON · CONTACT US
+            </a>
+          )}
+        </div>
+
+        {/* Tier 2: Monthly Ad-Free Supporter via Patreon */}
+        <div
+          className="cab-surface cab-chamfer"
+          style={{
+            padding: 24,
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "space-between",
+            gap: 18,
+            borderColor: "var(--volt)",
+            boxShadow: "0 0 28px rgba(243,255,0,0.14)"
+          }}
+        >
+          <div>
+            <div className="font-mono" style={{ fontSize: 11, color: "var(--volt)" }}>MOST POPULAR // AD-FREE MEMBERSHIP</div>
+            <div className="font-display" style={{ fontSize: 30, fontWeight: 700, margin: "8px 0" }}>
+              $3 <span style={{ fontSize: 14, color: "var(--ink-muted)" }}>/ MONTH</span>
+            </div>
+            <div className="font-mono" style={{ fontSize: 11, color: "var(--cyan)", marginBottom: 14 }}>
+              Via Patreon · Cancel anytime · Auto-syncs Pro badge via email
+            </div>
+            <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13, color: "#d5dae6", display: "grid", gap: 8 }}>
+              <li>100% ad-free arcade cabinets &amp; game pages</li>
+              <li>PRO Supporter badge next to your global high scores</li>
+              <li>Listed on the Community Hall of Patrons</li>
+              <li>Use the same email as your SYNTHPLAY login for instant activation</li>
+            </ul>
+          </div>
+          {patreonUrl ? (
+            <a href={patreonUrl} target="_blank" rel="noopener noreferrer" className="btn-volt" style={{ textAlign: "center", justifyContent: "center" }}>
+              JOIN ON PATREON ($3/MO) →
+            </a>
+          ) : (
+            <a href={supportMailto} className="btn-volt" style={{ textAlign: "center", justifyContent: "center" }}>
+              PATREON OPENING SOON · CONTACT US
+            </a>
+          )}
+        </div>
+
+        {/* Tier 3: Indie Dev Featured Spotlight */}
+        <div className="cab-surface cab-chamfer" style={{ padding: 24, display: "flex", flexDirection: "column", justifyContent: "space-between", gap: 18 }}>
+          <div>
+            <div className="font-mono" style={{ fontSize: 11, color: "var(--vermilion)" }}>FOR INDIE &amp; AI GAME DEVS</div>
+            <div className="font-display" style={{ fontSize: 30, fontWeight: 700, margin: "8px 0" }}>
+              $29 <span style={{ fontSize: 14, color: "var(--ink-muted)" }}>/ 7 DAYS</span>
+            </div>
+            <div className="font-mono" style={{ fontSize: 11, color: "var(--ink-muted)", marginBottom: 14 }}>
+              Featured Game Spotlight · Ko-fi or Direct Email Booking
+            </div>
+            <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13, color: "var(--ink-muted)", display: "grid", gap: 8 }}>
+              <li>Pin your HTML5/WebGL game or Steam Wishlist demo in the Arcade Spotlight</li>
+              <li>Dedicated card in the Hall of Patrons &amp; Homepage Marquee</li>
+              <li>Full review for quality &amp; player safety before going live</li>
+            </ul>
+          </div>
+          <a
+            href={kofiUrl || supportMailto}
+            target={kofiUrl ? "_blank" : undefined}
+            rel={kofiUrl ? "noopener noreferrer" : undefined}
+            className="btn-crimson"
+            style={{ textAlign: "center", justifyContent: "center" }}
+          >
+            BOOK INDIE SPOTLIGHT →
+          </a>
+        </div>
       </div>
 
-      {/* Live Sponsorship Booking Form */}
-      <form onSubmit={submitSponsor} className="cab-surface cab-chamfer" style={{ padding: 26, display: "grid", gap: 16 }}>
-        <div className="font-display" style={{ fontSize: 16, fontWeight: 700 }}>
-          {isSelectedRailLive
-            ? `LIVE ${provider.toUpperCase()} CHECKOUT · AUTO-PROVISIONS VIA VERIFIED WEBHOOK`
-            : "ACTIVATE SPONSOR SHOWCASE SLOT (DIRECT RESERVATION / SANDBOX MODE)"}
-        </div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))", gap: 14 }}>
-          <label>
-            <div className="font-mono" style={{ fontSize: 11, color: "var(--volt)", marginBottom: 6 }}>BRAND / PATRON NAME *</div>
-            <input className="sp-input" required value={payerName} onChange={(e) => setPayerName(e.target.value)} placeholder="e.g. HyperCompute AI" />
-          </label>
-          <label>
-            <div className="font-mono" style={{ fontSize: 11, color: "var(--volt)", marginBottom: 6 }}>PAYMENT RAIL</div>
-            <select className="sp-select" value={provider} onChange={(e) => setProvider(e.target.value as PaymentProvider)}>
-              <option value="creem">Creem MoR (Cards / Apple Pay -&gt; Bank / Alipay)</option>
-              <option value="kofi">Ko-fi (0% Fee -&gt; Mainland Business PayPal)</option>
-              <option value="patreon">Patreon (Monthly -&gt; Payoneer USD)</option>
-              <option value="paypal">Mainland Business PayPal (Cross-border / Invoice)</option>
-              <option value="payoneer_b2b">Payoneer Billing Service (B2B Invoice -&gt; Payoneer)</option>
-            </select>
-          </label>
-          <label>
-            <div className="font-mono" style={{ fontSize: 11, color: "var(--volt)", marginBottom: 6 }}>COUNTRY</div>
-            <select className="sp-select" value={country} onChange={(e) => setCountry(e.target.value)}>
-              {COUNTRIES.filter((c) => c.code !== "ALL").map((c) => (
-                <option key={c.code} value={c.code}>{c.code} — {getCountryName(c.code, locale)}</option>
-              ))}
-            </select>
-          </label>
-        </div>
+      {/* Transparent Direct Contact Bar */}
+      <div
+        className="cab-surface font-mono"
+        style={{
+          padding: "16px 20px",
+          display: "flex",
+          flexWrap: "wrap",
+          justifyContent: "space-between",
+          alignItems: "center",
+          gap: 12,
+          fontSize: 12
+        }}
+      >
+        <span style={{ color: "var(--ink-muted)" }}>
+          Want to sponsor a game jam, showcase an AI dev tool, or partner with SYNTHPLAY?
+        </span>
+        <a href="mailto:support@synthplay.games" style={{ color: "var(--cyan)", textDecoration: "none", fontWeight: 700 }}>
+          support@synthplay.games →
+        </a>
+      </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 14 }}>
-          <label>
-            <div className="font-mono" style={{ fontSize: 11, color: "var(--ink-muted)", marginBottom: 6 }}>SHOWCASE SLOGAN</div>
-            <input className="sp-input" value={tagline} onChange={(e) => setTagline(e.target.value)} placeholder="Displayed directly on Homepage Hall of Patrons" />
-          </label>
-          <label>
-            <div className="font-mono" style={{ fontSize: 11, color: "var(--ink-muted)", marginBottom: 6 }}>WEBSITE / PROFILE URL</div>
-            <input className="sp-input" value={targetUrl} onChange={(e) => setTargetUrl(e.target.value)} />
-          </label>
-        </div>
-
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
-          <span className="font-mono" style={{ fontSize: 12, color: "var(--ink-muted)" }}>
-            TOTAL: <strong style={{ color: "var(--volt)" }}>${amountMap[tier]} USD</strong> · Cross-border compliant
-          </span>
-          <button type="submit" className="btn-volt" disabled={submitting}>
-            {submitting ? "INITIALIZING..." : isSelectedRailLive ? `PAY VIA ${provider.toUpperCase()} ->` : "CONFIRM & ACTIVATE SHOWCASE SLOT"}
-          </button>
-        </div>
-
-        {done && (
-          <div className="font-mono" style={{ padding: 12, border: "1px solid var(--cyan)", background: "rgba(0,240,212,0.08)", color: "var(--cyan)", fontSize: 12 }}>
-            {done}
-          </div>
-        )}
-      </form>
+      {/* AI Creator Toolchain Affiliate Recommendations */}
+      <AiToolsShelf />
     </section>
   );
 }

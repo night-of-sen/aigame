@@ -87,8 +87,8 @@ export default function TermsOfServicePage() {
             <p style={{ margin: 0 }}>
               SYNTHPLAY is provided &ldquo;as is&rdquo; without warranties of any kind. For legal notices, DMCA takedown
               requests, or support inquiries, contact{" "}
-              <a href="mailto:sesenight@gmail.com" style={{ color: "#00F0D4" }}>
-                sesenight@gmail.com
+              <a href="mailto:support@synthplay.games" style={{ color: "#00F0D4" }}>
+                support@synthplay.games
               </a>
               .
             </p>

@@ -437,7 +437,7 @@ export function AdminConsole({
         {tab === "finance" && (
           <div style={{ display: "grid", gap: 18 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
-              <h1 className="font-display" style={{ margin: 0, fontSize: 24 }}>FINANCE LEDGER (PAYPAL / PAYONEER / CREEM / KO-FI / PATREON)</h1>
+              <h1 className="font-display" style={{ margin: 0, fontSize: 24 }}>FINANCE LEDGER (KO-FI · PATREON · PAYPAL · PAYONEER)</h1>
               <button className="ops-btn ops-btn-volt" onClick={exportCsv}>EXPORT CSV FOR SETTLEMENT</button>
             </div>
 
@@ -447,10 +447,9 @@ export function AdminConsole({
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 10 }} className="font-mono">
                 {[
-                  { name: "CREEM MoR", live: integrations.creem, url: "https://synthplay.games/api/webhooks/creem" },
-                  { name: "KO-FI", live: integrations.kofi, url: "https://synthplay.games/api/webhooks/kofi" },
-                  { name: "PATREON", live: integrations.patreon, url: "https://synthplay.games/api/webhooks/patreon" },
-                  { name: "PAYPAL BUSINESS", live: integrations.paypal, url: "https://synthplay.games/api/webhooks/paypal" }
+                  { name: "KO-FI (0% TIP CUT → PAYPAL)", live: integrations.kofi, url: "https://synthplay.games/api/webhooks/kofi" },
+                  { name: "PATREON ($3/MO PRO → PAYONEER)", live: integrations.patreon, url: "https://synthplay.games/api/webhooks/patreon" },
+                  { name: "PAYPAL BUSINESS (OPTIONAL)", live: integrations.paypal, url: "https://synthplay.games/api/webhooks/paypal" }
                 ].map((wh) => (
                   <div key={wh.name} style={{ padding: 10, border: "1px solid var(--line)", background: "rgba(255,255,255,0.02)", fontSize: 11 }}>
                     <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>

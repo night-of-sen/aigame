@@ -4,6 +4,7 @@ import React, { useRef, useState } from "react";
 import { COUNTRIES, getCountryName, type Locale, t } from "@synthplay/i18n";
 import type { GameRecord } from "@synthplay/db";
 import { IconShield, IconUpload } from "./Icons";
+import { AiToolsShelf } from "./AiToolsShelf";
 
 const SAMPLE_AI_HTML = `<!DOCTYPE html>
 <html>
@@ -387,6 +388,7 @@ export function StudioView({
           </div>
         )}
       </form>
+      <AiToolsShelf />
     </section>
   );
 }
