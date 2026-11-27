@@ -67,6 +67,9 @@ export function SynthPlayApp({ initial }: { initial: InitialData }) {
 
   const [country, setCountry] = useState("ALL");
   const [catalogFilter, setCatalogFilter] = useState<"ALL" | "AI" | "WEBGL" | "SINGLE">("ALL");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchEngine, setSearchEngine] = useState<"meilisearch" | "local" | null>(null);
+  const [searchHits, setSearchHits] = useState<GameRecord[] | null>(null);
   const [rankTab, setRankTab] = useState<"play" | "country" | "ai">("play");
   const [isSyncing, setIsSyncing] = useState(false);
 
@@ -78,9 +81,30 @@ export function SynthPlayApp({ initial }: { initial: InitialData }) {
   const [activeGame, setActiveGame] = useState<GameRecord | null>(null);
   const [pulseIdx, setPulseIdx] = useState(0);
 
-  const publishedGames = games.filter((g) => g.status === "published");
-  const featuredList = publishedGames.slice(0, 6);
-  const heroGame = featuredList[heroIdx % Math.max(1, featuredList.length)] ?? publishedGames[0];
+  useEffect(() => {
+    const q = searchQuery.trim();
+    if (!q) {
+      setSearchHits(null);
+      setSearchEngine(null);
+      return;
+    }
+    const timer = setTimeout(() => {
+      fetch(`/api/search?q=${encodeURIComponent(q)}&country=${encodeURIComponent(country)}`)
+        .then((r) => r.json())
+        .then((d) => {
+          if (Array.isArray(d.games)) {
+            setSearchHits(d.games);
+            setSearchEngine(d.engine || "local");
+          }
+        })
+        .catch(() => {});
+    }, 180);
+    return () => clearTimeout(timer);
+  }, [searchQuery, country]);
+
+  const publishedGames = (searchHits ?? games).filter((g) => g.status === "published");
+  const featuredList = games.filter((g) => g.status === "published").slice(0, 6);
+  const heroGame = featuredList[heroIdx % Math.max(1, featuredList.length)] ?? featuredList[0];
 
   const triggerHeroSwitch = useCallback((nextIdx: number) => {
     setHeroSwitching(true);
@@ -622,6 +646,45 @@ export function SynthPlayApp({ initial }: { initial: InitialData }) {
                   </button>
                 ))}
               </div>
+            </div>
+
+            <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 10, marginBottom: 16 }}>
+              <div style={{ position: "relative", flex: "1 1 280px", maxWidth: 460 }}>
+                <input
+                  type="search"
+                  className="sp-input font-mono"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="SEARCH GAMES, AI TOOLS, CREATORS (EN / 中文 / 日本語 / 한국어)..."
+                  style={{ fontSize: 12, paddingRight: searchQuery ? 96 : 14 }}
+                />
+                {searchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => setSearchQuery("")}
+                    className="font-mono"
+                    style={{
+                      position: "absolute",
+                      right: 8,
+                      top: "50%",
+                      transform: "translateY(-50%)",
+                      background: "rgba(255,255,255,0.08)",
+                      border: "1px solid var(--hairline)",
+                      color: "var(--volt)",
+                      fontSize: 10,
+                      padding: "3px 8px",
+                      cursor: "pointer"
+                    }}
+                  >
+                    CLEAR ✕
+                  </button>
+                )}
+              </div>
+              {searchEngine && (
+                <span className="font-mono" style={{ fontSize: 10, color: searchEngine === "meilisearch" ? "var(--cyan)" : "var(--ink-muted)", border: "1px solid var(--hairline)", padding: "4px 8px" }}>
+                  ENGINE: {searchEngine.toUpperCase()} ({publishedGames.length} HITS)
+                </span>
+              )}
             </div>
 
             <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 28 }}>

@@ -226,9 +226,22 @@ export function wrapSingleHtmlForSandbox(rawHtml: string, gameId: string): strin
   const bridge = `<script>
 (function(){
   window.__SYNTHPLAY_GAME_ID__ = ${JSON.stringify(gameId)};
+  var pendingLoads = [];
+  window.addEventListener("message", function(ev){
+    if(ev.data && ev.data.source === "synthplay-host" && ev.data.type === "LOAD_STATE_RESULT"){
+      while(pendingLoads.length){ try { pendingLoads.shift()(ev.data.payload || null); } catch(e){} }
+    }
+  });
   window.SynthPlay = {
     submitScore: function(score){
       try { window.parent.postMessage({ source: "synthplay-sdk", type: "SCORE", gameId: ${JSON.stringify(gameId)}, score: Number(score) || 0 }, "*"); } catch(e){}
+    },
+    saveState: function(payload){
+      try { window.parent.postMessage({ source: "synthplay-sdk", type: "SAVE_STATE", gameId: ${JSON.stringify(gameId)}, payload: payload || {} }, "*"); } catch(e){}
+    },
+    loadState: function(cb){
+      if(typeof cb === "function") pendingLoads.push(cb);
+      try { window.parent.postMessage({ source: "synthplay-sdk", type: "LOAD_STATE", gameId: ${JSON.stringify(gameId)} }, "*"); } catch(e){}
     },
     openTip: function(){
       try { window.parent.postMessage({ source: "synthplay-sdk", type: "OPEN_TIP", gameId: ${JSON.stringify(gameId)} }, "*"); } catch(e){}

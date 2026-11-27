@@ -5,9 +5,11 @@ import {
   readStore,
   writeStore,
   type AuditLogRecord,
+  type CloudSaveRecord,
   type GameRecord,
   type GameTranslationEntry,
   type ReviewRecord,
+  type ScoreRecord,
   type SponsorOrderRecord,
   type SponsorSlotRecord,
   type SynthPlayStore,
@@ -182,6 +184,29 @@ async function ensurePgReady(): Promise<boolean> {
         CREATE TABLE IF NOT EXISTS sp_meta (
           key TEXT PRIMARY KEY,
           value_int INTEGER NOT NULL DEFAULT 0
+        );
+      `;
+
+      await sql`
+        CREATE TABLE IF NOT EXISTS sp_scores (
+          id TEXT PRIMARY KEY,
+          game_id TEXT NOT NULL,
+          user_id TEXT,
+          player_name TEXT NOT NULL,
+          country_code TEXT NOT NULL DEFAULT 'US',
+          score BIGINT NOT NULL DEFAULT 0,
+          created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        );
+      `;
+      await sql`CREATE INDEX IF NOT EXISTS idx_sp_scores_game_score ON sp_scores (game_id, score DESC);`;
+
+      await sql`
+        CREATE TABLE IF NOT EXISTS sp_cloud_saves (
+          user_id TEXT NOT NULL,
+          game_id TEXT NOT NULL,
+          payload JSONB NOT NULL DEFAULT '{}'::jsonb,
+          updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+          PRIMARY KEY (user_id, game_id)
         );
       `;
 
@@ -673,4 +698,149 @@ export async function appendAuditLog(log: AuditLogRecord): Promise<void> {
 
 export function isPostgresActive(): boolean {
   return pgAvailable;
+}
+
+export async function submitGameScore(record: ScoreRecord): Promise<{ saved: boolean; personalBest: number }> {
+  const cleanScore = Math.max(0, Math.min(999_999_999, Math.round(record.score)));
+  const ok = await ensurePgReady();
+  const sql = getSql();
+
+  const redis = getRedis();
+  if (redis) {
+    try {
+      if (redis.status === "wait") await redis.connect();
+      await redis.zadd(`scores:game:${record.gameId}`, "GT", cleanScore, `${record.playerName}|${record.countryCode}`);
+    } catch {
+      // Best-effort cache sync
+    }
+  }
+
+  if (!ok || !sql) {
+    const store = readStore();
+    const list = store.scores || [];
+    const existing = list.find(
+      (s) => s.gameId === record.gameId && s.playerName.toLowerCase() === record.playerName.toLowerCase()
+    );
+    if (existing) {
+      if (cleanScore > existing.score) {
+        existing.score = cleanScore;
+        existing.createdAt = record.createdAt;
+        store.scores = list;
+        writeStore(store);
+        return { saved: true, personalBest: cleanScore };
+      }
+      return { saved: false, personalBest: existing.score };
+    }
+    list.push({ ...record, score: cleanScore });
+    store.scores = list;
+    writeStore(store);
+    return { saved: true, personalBest: cleanScore };
+  }
+
+  const existing = await sql<{ id: string; score: string }[]>`
+    SELECT id, score::text AS score FROM sp_scores
+    WHERE game_id = ${record.gameId} AND LOWER(player_name) = LOWER(${record.playerName})
+    LIMIT 1
+  `;
+
+  if (existing.length > 0) {
+    const prev = Number(existing[0].score || 0);
+    if (cleanScore > prev) {
+      await sql`
+        UPDATE sp_scores
+        SET score = ${cleanScore}, country_code = ${record.countryCode}, created_at = ${record.createdAt}
+        WHERE id = ${existing[0].id}
+      `;
+      return { saved: true, personalBest: cleanScore };
+    }
+    return { saved: false, personalBest: prev };
+  }
+
+  await sql`
+    INSERT INTO sp_scores (id, game_id, user_id, player_name, country_code, score, created_at)
+    VALUES (${record.id}, ${record.gameId}, ${record.userId ?? null}, ${record.playerName}, ${record.countryCode}, ${cleanScore}, ${record.createdAt})
+  `;
+  return { saved: true, personalBest: cleanScore };
+}
+
+export async function getGameHighScores(gameId: string, limit = 15): Promise<ScoreRecord[]> {
+  const ok = await ensurePgReady();
+  const sql = getSql();
+  if (!ok || !sql) {
+    const store = readStore();
+    return (store.scores || [])
+      .filter((s) => s.gameId === gameId)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, limit);
+  }
+
+  const rows = await sql`
+    SELECT id, game_id, user_id, player_name, country_code, score, created_at
+    FROM sp_scores
+    WHERE game_id = ${gameId}
+    ORDER BY score DESC, created_at ASC
+    LIMIT ${limit}
+  `;
+
+  return rows.map((r) => ({
+    id: String(r.id),
+    gameId: String(r.game_id),
+    userId: r.user_id ? String(r.user_id) : undefined,
+    playerName: String(r.player_name),
+    countryCode: String(r.country_code),
+    score: Number(r.score || 0),
+    createdAt: new Date(r.created_at).toISOString()
+  }));
+}
+
+export async function saveCloudGameState(
+  userId: string,
+  gameId: string,
+  payload: Record<string, unknown>
+): Promise<CloudSaveRecord> {
+  const updatedAt = new Date().toISOString();
+  const ok = await ensurePgReady();
+  const sql = getSql();
+  if (!ok || !sql) {
+    const store = readStore();
+    const saves = store.cloudSaves || [];
+    const idx = saves.findIndex((s) => s.userId === userId && s.gameId === gameId);
+    const entry: CloudSaveRecord = { userId, gameId, payload, updatedAt };
+    if (idx >= 0) saves[idx] = entry;
+    else saves.push(entry);
+    store.cloudSaves = saves;
+    writeStore(store);
+    return entry;
+  }
+
+  await sql`
+    INSERT INTO sp_cloud_saves (user_id, game_id, payload, updated_at)
+    VALUES (${userId}, ${gameId}, ${sql.json(payload as unknown as postgres.JSONValue)}, ${updatedAt})
+    ON CONFLICT (user_id, game_id)
+    DO UPDATE SET payload = EXCLUDED.payload, updated_at = EXCLUDED.updated_at
+  `;
+  return { userId, gameId, payload, updatedAt };
+}
+
+export async function loadCloudGameState(userId: string, gameId: string): Promise<CloudSaveRecord | null> {
+  const ok = await ensurePgReady();
+  const sql = getSql();
+  if (!ok || !sql) {
+    const store = readStore();
+    return (store.cloudSaves || []).find((s) => s.userId === userId && s.gameId === gameId) || null;
+  }
+
+  const rows = await sql`
+    SELECT user_id, game_id, payload, updated_at
+    FROM sp_cloud_saves
+    WHERE user_id = ${userId} AND game_id = ${gameId}
+    LIMIT 1
+  `;
+  if (rows.length === 0) return null;
+  return {
+    userId: String(rows[0].user_id),
+    gameId: String(rows[0].game_id),
+    payload: (rows[0].payload || {}) as Record<string, unknown>,
+    updatedAt: new Date(rows[0].updated_at).toISOString()
+  };
 }

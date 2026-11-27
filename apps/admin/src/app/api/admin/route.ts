@@ -107,8 +107,8 @@ export async function POST(req: NextRequest) {
 
       const provider = (process.env.AI_TRANSLATE_PROVIDER || "gemini").toLowerCase();
       const prompt = [
-        "Translate this indie arcade game metadata into en, zh-CN, ja, es.",
-        'Return ONLY valid JSON with keys "en", "zh-CN", "ja", "es", each {"title": string, "tagline": string}.',
+        "Translate this indie arcade game metadata into 6 locales: en, zh-CN, ja, ko, es, pt-BR.",
+        'Return ONLY valid JSON with keys "en", "zh-CN", "ja", "ko", "es", "pt-BR", each {"title": string, "tagline": string}.',
         `Title: ${game.title}`,
         `Tagline: ${game.tagline}`
       ].join("\n");

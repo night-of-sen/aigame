@@ -1,21 +1,23 @@
-export type Locale = "zh-CN" | "en" | "ja" | "es";
+export type Locale = "en" | "zh-CN" | "ja" | "es" | "ko" | "pt-BR";
 
 export const SUPPORTED_LOCALES: Array<{ code: Locale; label: string; native: string }> = [
-  { code: "zh-CN", label: "ZH", native: "简体中文" },
   { code: "en", label: "EN", native: "English" },
+  { code: "zh-CN", label: "ZH", native: "简体中文" },
   { code: "ja", label: "JA", native: "日本語" },
-  { code: "es", label: "ES", native: "Español" }
+  { code: "ko", label: "KO", native: "한국어" },
+  { code: "es", label: "ES", native: "Español" },
+  { code: "pt-BR", label: "PT", native: "Português" }
 ];
 
 export const COUNTRIES = [
-  { code: "ALL", nameZh: "全球全部", nameEn: "GLOBAL", nameJa: "すべて", nameEs: "GLOBAL", flag: "GLB" },
-  { code: "JP", nameZh: "日本", nameEn: "JAPAN", nameJa: "日本", nameEs: "JAPÓN", flag: "JP" },
-  { code: "US", nameZh: "美国", nameEn: "USA", nameJa: "アメリカ", nameEs: "EE.UU.", flag: "US" },
-  { code: "CN", nameZh: "中国", nameEn: "CHINA", nameJa: "中国", nameEs: "CHINA", flag: "CN" },
-  { code: "KR", nameZh: "韩国", nameEn: "KOREA", nameJa: "韓国", nameEs: "COREA", flag: "KR" },
-  { code: "BR", nameZh: "巴西", nameEn: "BRAZIL", nameJa: "ブラジル", nameEs: "BRASIL", flag: "BR" },
-  { code: "DE", nameZh: "德国", nameEn: "GERMANY", nameJa: "ドイツ", nameEs: "ALEMANIA", flag: "DE" },
-  { code: "FR", nameZh: "法国", nameEn: "FRANCE", nameJa: "フランス", nameEs: "FRANCIA", flag: "FR" }
+  { code: "ALL", nameZh: "全球全部", nameEn: "GLOBAL", nameJa: "すべて", nameEs: "GLOBAL", nameKo: "글로벌", namePt: "GLOBAL", flag: "GLB" },
+  { code: "JP", nameZh: "日本", nameEn: "JAPAN", nameJa: "日本", nameEs: "JAPÓN", nameKo: "일본", namePt: "JAPÃO", flag: "JP" },
+  { code: "US", nameZh: "美国", nameEn: "USA", nameJa: "アメリカ", nameEs: "EE.UU.", nameKo: "미국", namePt: "EUA", flag: "US" },
+  { code: "CN", nameZh: "中国", nameEn: "CHINA", nameJa: "中国", nameEs: "CHINA", nameKo: "중국", namePt: "CHINA", flag: "CN" },
+  { code: "KR", nameZh: "韩国", nameEn: "KOREA", nameJa: "韓国", nameEs: "COREA", nameKo: "대한민국", namePt: "COREIA", flag: "KR" },
+  { code: "BR", nameZh: "巴西", nameEn: "BRAZIL", nameJa: "ブラジル", nameEs: "BRASIL", nameKo: "브라질", namePt: "BRASIL", flag: "BR" },
+  { code: "DE", nameZh: "德国", nameEn: "GERMANY", nameJa: "ドイツ", nameEs: "ALEMANIA", nameKo: "독일", namePt: "ALEMANHA", flag: "DE" },
+  { code: "FR", nameZh: "法国", nameEn: "FRANCE", nameJa: "フランス", nameEs: "FRANCIA", nameKo: "프랑스", namePt: "FRANÇA", flag: "FR" }
 ] as const;
 
 export const DICTIONARY: Record<Locale, Record<string, string>> = {
@@ -178,6 +180,59 @@ export const DICTIONARY: Record<Locale, Record<string, string>> = {
     authSubmitRegister: "無料アカウント作成",
     authAutoHint: "ハンドル名と国バッジは自動設定され、マイページでいつでも変更できます。"
   },
+  ko: {
+    navArcade: "아케이드",
+    navRankings: "랭킹",
+    navStudio: "게임 업로드",
+    navDashboard: "스튜디오",
+    navSponsor: "스폰서",
+    navAdmin: "관리자",
+    heroKicker: "CABINET 01 // 글로벌 무료 & AI 자작 아케이드",
+    heroCtaPlay: "무료로 바로 플레이",
+    heroCtaUpload: "AI 게임 업로드",
+    heroCtaSponsor: "스폰서십",
+    gpuActive: "WEBGL 셰이더 활성",
+    gpuPaused: "GPU 절전 · 게임 100% 집중",
+    sponsorTickerLabel: "공식 스폰서 & 게임잼 파트너",
+    fundingTitle: "이달의 글로벌 CDN & AI 게임잼 상금풀",
+    fundingAction: "후원하기",
+    countrySectionTitle: "국가별 게임 탐색",
+    countrySectionSub: "전 세계 인디 개발자와 AI 크리에이터의 무료 웹 게임을 국가별로 탐색하세요",
+    rankingsTitle: "실시간 글로벌 랭킹",
+    rankTabPlays: "인기 플레이",
+    rankTabCountries: "국가 창작력",
+    rankTabAi: "AI 네이티브",
+    catalogTitle: "무료 & AI 아케이드 목록",
+    catalogFilterAll: "전체",
+    catalogFilterAi: "AI 네이티브",
+    catalogFilterWebgl: "WEBGL / H5",
+    catalogFilterSingle: "단일 HTML",
+    hallTitle: "명예 후원자 홀",
+    hallSub: "크리에이터 후원 수수료 0% · 글로벌 무료 서버와 월간 AI 게임잼 상금에 사용됩니다",
+    hallCta: "스폰서 슬롯 예약",
+    playNow: "게임 실행",
+    freeOnline: "무료 웹게임",
+    audioOn: "효과음 켜짐",
+    audioOff: "음소거",
+    studioTitle: "크리에이터 업로드 베이",
+    studioSub: "HTML5/WebGL ZIP 또는 단일 AI HTML을 붙여넣어 10초 만에 보안 샌드박스에 배포",
+    dashboardTitle: "플레이어 & 크리에이터 콘솔",
+    sponsorPageTitle: "스폰서십 & 프로 멤버십",
+    authSignInBtn: "로그인",
+    authTitleLogin: "다시 오신 것을 환영합니다",
+    authTitleRegister: "SYNTHPLAY 무료 가입",
+    authSub: "국가 배지 자동 감지 · AI 게임 무료 플레이 및 배포",
+    authGoogleBtn: "Google로 계속하기",
+    authGoogleNotReady: ".env에 GOOGLE_CLIENT_ID 설정 필요",
+    authOrEmail: "또는 이메일로 계속",
+    authTabLogin: "로그인",
+    authTabRegister: "회원가입",
+    authEmailLabel: "이메일 주소",
+    authPasswordLabel: "비밀번호 (6자 이상)",
+    authSubmitLogin: "로그인",
+    authSubmitRegister: "무료 계정 만들기",
+    authAutoHint: "닉네임과 국가는 자동 지정되며 스튜디오에서 언제든 수정 가능합니다."
+  },
   es: {
     navArcade: "ARCADE",
     navRankings: "RANKINGS",
@@ -230,25 +285,79 @@ export const DICTIONARY: Record<Locale, Record<string, string>> = {
     authSubmitLogin: "INICIAR SESIÓN",
     authSubmitRegister: "CREAR CUENTA GRATIS",
     authAutoHint: "Tu alias y país se asignan automáticamente y puedes cambiarlos en tu panel."
+  },
+  "pt-BR": {
+    navArcade: "ARCADE",
+    navRankings: "RANKINGS",
+    navStudio: "PUBLICAR",
+    navDashboard: "ESTÚDIO",
+    navSponsor: "APOIAR",
+    navAdmin: "ADMIN",
+    heroKicker: "CABINET 01 // ARCADE GRATUITO & JOGOS FEITOS COM IA",
+    heroCtaPlay: "JOGAR GRÁTIS AGORA",
+    heroCtaUpload: "ENVIAR JOGO IA",
+    heroCtaSponsor: "PATROCÍNIO",
+    gpuActive: "SHADER WEBGL ATIVO",
+    gpuPaused: "GPU PAUSADA · 100% PARA O JOGO",
+    sponsorTickerLabel: "PATROCINADORES OFICIAIS",
+    fundingTitle: "FUNDO MENSAL CDN & AI GAME JAM",
+    fundingAction: "APOIAR",
+    countrySectionTitle: "EXPLORAR POR PAÍS",
+    countrySectionSub: "Descubra jogos gratuitos HTML5 e criados com IA organizados por país",
+    rankingsTitle: "RANKINGS AO VIVO",
+    rankTabPlays: "MAIS JOGADOS",
+    rankTabCountries: "PODER POR PAÍS",
+    rankTabAi: "IA NATIVA",
+    catalogTitle: "CATÁLOGO ARCADE",
+    catalogFilterAll: "TODOS",
+    catalogFilterAi: "IA NATIVA",
+    catalogFilterWebgl: "WEBGL / H5",
+    catalogFilterSingle: "HTML ÚNICO",
+    hallTitle: "HALL DE PATROCINADORES",
+    hallSub: "0% de comissão em gorjetas · Financia servidores globais e prêmios da AI Game Jam",
+    hallCta: "RESERVAR ESPAÇO",
+    playNow: "JOGAR",
+    freeOnline: "GRÁTIS WEB",
+    audioOn: "SOM ON",
+    audioOff: "MUDO",
+    studioTitle: "ESTÚDIO DE UPLOAD",
+    studioSub: "Envie pacotes ZIP HTML5/WebGL ou cole HTML único gerado por IA no sandbox seguro",
+    dashboardTitle: "PAINEL DO JOGADOR & CRIADOR",
+    sponsorPageTitle: "PATROCÍNIO & PLANOS PRO",
+    authSignInBtn: "ENTRAR",
+    authTitleLogin: "BEM-VINDO DE VOLTA",
+    authTitleRegister: "ENTRE GRÁTIS NO SYNTHPLAY",
+    authSub: "Detecta seu país automaticamente · Jogue e publique jogos IA grátis",
+    authGoogleBtn: "Continuar com Google",
+    authGoogleNotReady: "Falta configurar GOOGLE_CLIENT_ID no .env",
+    authOrEmail: "OU CONTINUE COM E-MAIL",
+    authTabLogin: "ENTRAR",
+    authTabRegister: "CRIAR CONTA",
+    authEmailLabel: "E-MAIL",
+    authPasswordLabel: "SENHA (MÍN. 6 CARACTERES)",
+    authSubmitLogin: "ENTRAR",
+    authSubmitRegister: "CRIAR CONTA GRÁTIS",
+    authAutoHint: "Apelido e bandeira são atribuídos automaticamente e editáveis no Estúdio."
   }
 };
 
 export function detectLocaleFromHeader(acceptLanguage: string | null | undefined): Locale {
   if (!acceptLanguage) return "en";
   const lower = acceptLanguage.toLowerCase();
-  // Respect ordered language preferences in Accept-Language
   const tags = lower.split(",").map((part) => part.split(";")[0].trim());
   for (const tag of tags) {
     if (tag.startsWith("en")) return "en";
     if (tag.startsWith("zh")) return "zh-CN";
     if (tag.startsWith("ja")) return "ja";
+    if (tag.startsWith("ko")) return "ko";
     if (tag.startsWith("es")) return "es";
+    if (tag.startsWith("pt")) return "pt-BR";
   }
   return "en";
 }
 
 export function isValidLocale(val: string | undefined | null): val is Locale {
-  return val === "en" || val === "zh-CN" || val === "ja" || val === "es";
+  return val === "en" || val === "zh-CN" || val === "ja" || val === "ko" || val === "es" || val === "pt-BR";
 }
 
 export function t(locale: Locale, key: string): string {
@@ -260,6 +369,8 @@ export function getCountryName(code: string, locale: Locale): string {
   if (!found) return code;
   if (locale === "zh-CN") return found.nameZh;
   if (locale === "ja") return found.nameJa;
+  if (locale === "ko") return found.nameKo;
   if (locale === "es") return found.nameEs;
+  if (locale === "pt-BR") return found.namePt;
   return found.nameEn;
 }

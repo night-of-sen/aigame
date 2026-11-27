@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { type Locale, t } from "@synthplay/i18n";
+import { TurnstileWidget } from "./TurnstileWidget";
 
 export interface AuthUserSummary {
   id: string;
@@ -37,6 +38,7 @@ export function AuthModal({
   const [mode, setMode] = useState<"login" | "register">("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [turnstileToken, setTurnstileToken] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -49,7 +51,7 @@ export function AuthModal({
       const res = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password })
+        body: JSON.stringify({ email, password, turnstileToken })
       });
       const data = await res.json();
       if (!res.ok) {
@@ -181,9 +183,12 @@ export function AuthModal({
           </label>
 
           {mode === "register" && (
-            <div style={{ fontSize: 11.5, color: "var(--ink-muted)", lineHeight: 1.45 }}>
-              {t(locale, "authAutoHint")}
-            </div>
+            <>
+              <div style={{ fontSize: 11.5, color: "var(--ink-muted)", lineHeight: 1.45 }}>
+                {t(locale, "authAutoHint")}
+              </div>
+              <TurnstileWidget onToken={setTurnstileToken} />
+            </>
           )}
 
           {error && (

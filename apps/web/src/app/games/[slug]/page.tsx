@@ -68,7 +68,7 @@ export default async function GameDetailPage({
     applicationCategory: "Game",
     operatingSystem: "Any Web Browser",
     playMode: "SinglePlayer",
-    inLanguage: ["en", "zh-CN", "ja", "es"],
+    inLanguage: ["en", "zh-CN", "ja", "ko", "es", "pt-BR"],
     author: {
       "@type": "Person",
       name: game.creatorName

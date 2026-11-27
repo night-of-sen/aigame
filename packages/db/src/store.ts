@@ -110,6 +110,23 @@ export interface AuditLogRecord {
   createdAt: string;
 }
 
+export interface ScoreRecord {
+  id: string;
+  gameId: string;
+  userId?: string;
+  playerName: string;
+  countryCode: string;
+  score: number;
+  createdAt: string;
+}
+
+export interface CloudSaveRecord {
+  userId: string;
+  gameId: string;
+  payload: Record<string, unknown>;
+  updatedAt: string;
+}
+
 export interface SynthPlayStore {
   users: UserRecord[];
   games: GameRecord[];
@@ -117,6 +134,8 @@ export interface SynthPlayStore {
   sponsorSlots: SponsorSlotRecord[];
   sponsorOrders: SponsorOrderRecord[];
   auditLogs: AuditLogRecord[];
+  scores?: ScoreRecord[];
+  cloudSaves?: CloudSaveRecord[];
   monthlyFundingGoalUsd: number;
   monthlyFundingRaisedUsd: number;
 }

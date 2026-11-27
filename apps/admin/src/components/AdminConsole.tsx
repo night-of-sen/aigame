@@ -16,6 +16,8 @@ export interface AdminIntegrationsStatus {
   paypal: boolean;
   aiTranslate: boolean;
   aiProvider: string;
+  meili?: boolean;
+  turnstile?: boolean;
 }
 
 export function AdminConsole({
@@ -113,6 +115,12 @@ export function AdminConsole({
             </span>
             <span style={{ padding: "2px 6px", border: `1px solid ${integrations.aiTranslate ? "var(--volt)" : "var(--line-strong)"}`, color: integrations.aiTranslate ? "var(--volt)" : "var(--muted)" }}>
               {integrations.aiTranslate ? `AI ${integrations.aiProvider}` : "AI I18N OFF"}
+            </span>
+            <span style={{ padding: "2px 6px", border: `1px solid ${integrations.meili ? "var(--cyan)" : "var(--line-strong)"}`, color: integrations.meili ? "var(--cyan)" : "var(--muted)" }}>
+              {integrations.meili ? "MEILI LIVE" : "SEARCH LOCAL"}
+            </span>
+            <span style={{ padding: "2px 6px", border: `1px solid ${integrations.turnstile ? "var(--volt)" : "var(--line-strong)"}`, color: integrations.turnstile ? "var(--volt)" : "var(--muted)" }}>
+              {integrations.turnstile ? "TURNSTILE ON" : "BOT GUARD OFF"}
             </span>
           </div>
         </div>
@@ -529,9 +537,9 @@ export function AdminConsole({
                         <td>
                           <button
                             className="ops-btn ops-btn-volt"
-                            onClick={() => runAction({ action: "AI_TRANSLATE_GAME", gameId: g.id }, `AI translated ${g.title} into EN/ZH/JA/ES!`)}
+                            onClick={() => runAction({ action: "AI_TRANSLATE_GAME", gameId: g.id }, `AI translated ${g.title} into EN/ZH/JA/KO/ES/PT!`)}
                           >
-                            AI TRANSLATE 4 LOCALES
+                            AI TRANSLATE 6 LOCALES
                           </button>
                         </td>
                       </tr>

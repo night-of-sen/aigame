@@ -18,7 +18,7 @@ function parseJsonObject(raw: string): Record<string, GameTranslationEntry> | nu
     const parsed = JSON.parse(trimmed);
     if (!parsed || typeof parsed !== "object") return null;
     const result: Record<string, GameTranslationEntry> = {};
-    for (const loc of ["en", "zh-CN", "ja", "es"]) {
+    for (const loc of ["en", "zh-CN", "ja", "ko", "es", "pt-BR"]) {
       const entry = parsed[loc];
       if (entry && typeof entry === "object" && typeof entry.title === "string" && typeof entry.tagline === "string") {
         result[loc] = {
@@ -35,8 +35,8 @@ function parseJsonObject(raw: string): Record<string, GameTranslationEntry> | nu
 }
 
 /**
- * Translates a game's title, tagline, and optional AI creation story into English, Simplified Chinese,
- * Japanese, and Spanish using Gemini Flash or DeepSeek / OpenAI-compatible APIs.
+ * Translates a game's title, tagline, and optional AI creation story into 6 locales:
+ * English, Simplified Chinese, Japanese, Korean, Spanish, and Brazilian Portuguese.
  * Always fails soft (never blocks game publishing if API key is missing or provider times out).
  */
 export async function translateGameMetadata(input: {
@@ -48,11 +48,14 @@ export async function translateGameMetadata(input: {
   translated: boolean;
   translations: Record<string, GameTranslationEntry>;
 }> {
+  const base = { title: input.title, tagline: input.tagline, aiPromptNote: input.aiPromptNote || undefined };
   const fallback: Record<string, GameTranslationEntry> = {
-    en: { title: input.title, tagline: input.tagline, aiPromptNote: input.aiPromptNote || undefined },
-    "zh-CN": { title: input.title, tagline: input.tagline, aiPromptNote: input.aiPromptNote || undefined },
-    ja: { title: input.title, tagline: input.tagline, aiPromptNote: input.aiPromptNote || undefined },
-    es: { title: input.title, tagline: input.tagline, aiPromptNote: input.aiPromptNote || undefined }
+    en: base,
+    "zh-CN": base,
+    ja: base,
+    ko: base,
+    es: base,
+    "pt-BR": base
   };
 
   if (!isAiTranslateConfigured()) {
@@ -63,9 +66,9 @@ export async function translateGameMetadata(input: {
   const apiKey = process.env.AI_TRANSLATE_API_KEY!;
   const prompt = [
     "You are a game localization specialist for SYNTHPLAY, a global cyberpunk indie arcade platform.",
-    "Translate the following game metadata into 4 locales: en, zh-CN, ja, es.",
+    "Translate the following game metadata into 6 locales: en, zh-CN, ja, ko, es, pt-BR.",
     "Keep game titles punchy and arcade-styled; keep taglines concise and exciting.",
-    "Return ONLY valid JSON with exact keys: \"en\", \"zh-CN\", \"ja\", \"es\".",
+    "Return ONLY valid JSON with exact keys: \"en\", \"zh-CN\", \"ja\", \"ko\", \"es\", \"pt-BR\".",
     "Each key must map to {\"title\": string, \"tagline\": string, \"aiPromptNote\": string}.",
     "",
     `Source Title: ${input.title}`,

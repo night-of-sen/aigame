@@ -8,10 +8,19 @@ import {
   signSessionToken,
   type UserRecord
 } from "@synthplay/db";
+import { verifyTurnstileToken } from "@/lib/turnstile";
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
+    const turnstile = await verifyTurnstileToken(
+      body.turnstileToken,
+      req.headers.get("cf-connecting-ip") || req.headers.get("x-forwarded-for")
+    );
+    if (!turnstile.ok) {
+      return NextResponse.json({ error: turnstile.error || "Anti-bot check failed." }, { status: 403 });
+    }
+
     const email = String(body.email || "").trim().toLowerCase();
     const password = String(body.password || "");
 

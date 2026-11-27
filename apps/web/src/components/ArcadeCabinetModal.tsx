@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
-import type { GameRecord } from "@synthplay/db";
-import { IconShield, IconSpark } from "./Icons";
+import React, { useEffect, useRef, useState } from "react";
+import type { GameRecord, ScoreRecord } from "@synthplay/db";
+import { IconShield, IconSpark, IconTrophy } from "./Icons";
 import { BuiltInGameRouter } from "./games/BuiltInGameRouter";
 
 interface ArcadeCabinetModalProps {
@@ -22,7 +22,21 @@ export function ArcadeCabinetModal({
 }: ArcadeCabinetModalProps) {
   const [visibleSec, setVisibleSec] = useState(0);
   const [counted, setCounted] = useState(false);
-  const [sdkScore, setSdkScore] = useState<number | null>(null);
+  const [sdkScore, setSdkScore] = useState<number>(0);
+  const [scores, setScores] = useState<ScoreRecord[]>([]);
+  const [scoreStatus, setScoreStatus] = useState<string | null>(null);
+  const [submittingScore, setSubmittingScore] = useState(false);
+  const iframeRef = useRef<HTMLIFrameElement | null>(null);
+
+  // Load existing top high scores for this cabinet
+  useEffect(() => {
+    fetch(`/api/scores?gameId=${encodeURIComponent(game.id)}`)
+      .then((r) => r.json())
+      .then((d) => {
+        if (Array.isArray(d.scores)) setScores(d.scores);
+      })
+      .catch(() => {});
+  }, [game.id]);
 
   // ESC to close cabinet
   useEffect(() => {
@@ -66,20 +80,60 @@ export function ArcadeCabinetModal({
     return () => clearInterval(timer);
   }, [game.id, onPlayCounted, playerCountry]);
 
-  // Listen for SynthPlay Game SDK postMessage events (SCORE / OPEN_TIP)
+  // Listen for SynthPlay Game SDK postMessage events (SCORE / SAVE_STATE / LOAD_STATE / OPEN_TIP)
   useEffect(() => {
     const onMessage = (ev: MessageEvent) => {
       const data = ev.data;
       if (!data || data.source !== "synthplay-sdk") return;
       if (data.type === "SCORE" && Number.isFinite(Number(data.score))) {
-        setSdkScore(Number(data.score));
+        setSdkScore((prev) => Math.max(prev, Number(data.score)));
+      } else if (data.type === "SAVE_STATE" && data.payload && typeof data.payload === "object") {
+        fetch("/api/cloud-save", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ gameId: game.id, payload: data.payload })
+        }).catch(() => {});
+      } else if (data.type === "LOAD_STATE") {
+        fetch(`/api/cloud-save?gameId=${encodeURIComponent(game.id)}`)
+          .then((r) => (r.ok ? r.json() : { save: null }))
+          .then((d) => {
+            iframeRef.current?.contentWindow?.postMessage(
+              { source: "synthplay-host", type: "LOAD_STATE_RESULT", payload: d?.save?.payload || null },
+              "*"
+            );
+          })
+          .catch(() => {});
       } else if (data.type === "OPEN_TIP" && game.creatorTipUrl) {
         window.open(game.creatorTipUrl, "_blank", "noopener,noreferrer");
       }
     };
     window.addEventListener("message", onMessage);
     return () => window.removeEventListener("message", onMessage);
-  }, [game.creatorTipUrl]);
+  }, [game.creatorTipUrl, game.id]);
+
+  const handleSubmitScore = async () => {
+    if (sdkScore <= 0 || submittingScore) return;
+    setSubmittingScore(true);
+    setScoreStatus(null);
+    try {
+      const res = await fetch("/api/scores", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          gameId: game.id,
+          score: sdkScore,
+          countryCode: playerCountry === "ALL" ? "US" : playerCountry
+        })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        if (Array.isArray(data.scores)) setScores(data.scores);
+        setScoreStatus(data.saved ? `NEW RECORD SAVED: ${data.personalBest.toLocaleString()}!` : `PERSONAL BEST: ${data.personalBest.toLocaleString()}`);
+      }
+    } finally {
+      setSubmittingScore(false);
+    }
+  };
 
   return (
     <div className="modal-backdrop" role="dialog" aria-modal="true">
@@ -107,21 +161,36 @@ export function ArcadeCabinetModal({
               <span style={{ color: counted ? "var(--volt)" : "var(--ink-muted)" }}>
                 | HEARTBEAT: {visibleSec}s {counted ? "(VALID PLAY RECORDED)" : "(10s FOR RANK)"}
               </span>
-              {sdkScore !== null && (
-                <span style={{ color: "var(--volt)" }}>| SCORE: {sdkScore.toLocaleString()}</span>
+              {sdkScore > 0 && (
+                <span style={{ color: "var(--volt)" }}>| BEST RUN: {sdkScore.toLocaleString()}</span>
               )}
             </div>
           </div>
 
-          <button className="btn-steel" onClick={onClose} style={{ padding: "8px 16px" }}>
-            ESC / EXIT CABINET
-          </button>
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            {sdkScore > 0 && (
+              <button
+                type="button"
+                className="btn-volt font-mono"
+                onClick={handleSubmitScore}
+                disabled={submittingScore}
+                style={{ padding: "8px 14px", fontSize: 11 }}
+              >
+                <IconTrophy size={13} />
+                <span>{submittingScore ? "SAVING..." : `POST SCORE (${sdkScore.toLocaleString()})`}</span>
+              </button>
+            )}
+            <button className="btn-steel" onClick={onClose} style={{ padding: "8px 16px" }}>
+              ESC / EXIT
+            </button>
+          </div>
         </div>
 
         {/* Game Viewport */}
         <div style={{ position: "relative", border: "1px solid var(--hairline-strong)", background: "#050608", overflow: "hidden" }}>
           {game.sandboxUrl ? (
             <iframe
+              ref={iframeRef}
               title={game.title}
               sandbox={
                 game.sandboxUrl.startsWith("https://")
@@ -133,14 +202,48 @@ export function ArcadeCabinetModal({
             />
           ) : game.sandboxHtml ? (
             <iframe
+              ref={iframeRef}
               title={game.title}
               sandbox="allow-scripts allow-pointer-lock"
               srcDoc={game.sandboxHtml}
               style={{ width: "100%", height: 460, border: 0, display: "block", background: "#07080b" }}
             />
           ) : (
-            <BuiltInGameRouter game={game} onScore={setSdkScore} />
+            <BuiltInGameRouter game={game} onScore={(s) => setSdkScore((prev) => Math.max(prev, s))} />
           )}
+        </div>
+
+        {/* Live Per-Game High Score Strip (PostgreSQL + Redis ZSET) */}
+        <div
+          className="font-mono"
+          style={{
+            marginTop: 12,
+            padding: "10px 14px",
+            background: "rgba(9,11,16,0.92)",
+            border: "1px solid var(--hairline)",
+            display: "flex",
+            flexWrap: "wrap",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 10,
+            fontSize: 11
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
+            <span style={{ color: "var(--volt)", fontWeight: 700, display: "inline-flex", alignItems: "center", gap: 5 }}>
+              <IconTrophy size={13} /> CABINET HIGH SCORES:
+            </span>
+            {scores.length === 0 ? (
+              <span style={{ color: "var(--ink-muted)" }}>No scores posted yet — score points &amp; click POST SCORE to claim #1!</span>
+            ) : (
+              scores.slice(0, 5).map((sc, i) => (
+                <span key={sc.id} style={{ color: i === 0 ? "var(--volt)" : "#d5dae6" }}>
+                  #{i + 1} [{sc.countryCode}] {sc.playerName}: <strong>{sc.score.toLocaleString()}</strong>
+                </span>
+              ))
+            )}
+          </div>
+          {scoreStatus && <span style={{ color: "var(--cyan)", fontWeight: 700 }}>{scoreStatus}</span>}
         </div>
 
         {/* Slot #4: Game Page Dual Sponsor & Creator Tip Dock */}
@@ -149,7 +252,7 @@ export function ArcadeCabinetModal({
             display: "grid",
             gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
             gap: 12,
-            marginTop: 14
+            marginTop: 12
           }}
         >
           <div style={{ padding: "12px 14px", background: "var(--bg-panel)", border: "1px solid var(--hairline)", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
