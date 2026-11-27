@@ -169,6 +169,36 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true, store: nextStore });
     }
 
+    if (action === "GENERATE_LAUNCH_KIT") {
+      const { generateLaunchKitForGame } = await import("@/lib/autoPromote");
+      const gameId = String(body.gameId || "");
+      const store = await loadFullStore();
+      const game = store.games.find((g) => g.id === gameId) || store.games.find((g) => g.status === "published");
+      if (!game) return NextResponse.json({ error: "No published game found" }, { status: 404 });
+      const kit = await generateLaunchKitForGame(game);
+      return NextResponse.json({ ok: true, kit, gameId: game.id, store });
+    }
+
+    if (action === "PUBLISH_GROWTH_NOW") {
+      const { generateLaunchKitForGame, publishToArmedChannels } = await import("@/lib/autoPromote");
+      const gameId = String(body.gameId || "");
+      const store = await loadFullStore();
+      const game = store.games.find((g) => g.id === gameId) || store.games.find((g) => g.status === "published");
+      if (!game) return NextResponse.json({ error: "No published game found" }, { status: 404 });
+      const kit = body.kit || (await generateLaunchKitForGame(game));
+      const results = await publishToArmedChannels(game, kit);
+      await appendAuditLog({
+        id: `aud-${Date.now().toString(36)}`,
+        actor: session.email,
+        action: "AUTO_GROWTH_PUBLISHED",
+        target: `${game.id} (${game.title})`,
+        detail: results.length > 0 ? results.map((r) => `${r.channel}:${r.status}`).join(" | ") : "No social API channels armed yet",
+        createdAt: new Date().toISOString()
+      });
+      const nextStore = await loadFullStore();
+      return NextResponse.json({ ok: true, results, kit, store: nextStore });
+    }
+
     return NextResponse.json({ error: "Unsupported admin action" }, { status: 400 });
   } catch {
     return NextResponse.json({ error: "Invalid request" }, { status: 400 });

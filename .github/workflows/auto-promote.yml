@@ -1,0 +1,55 @@
+name: Daily Auto-Promote Game Spotlight
+
+on:
+  schedule:
+    # Runs daily at 14:00 UTC (morning US/EU, evening Asia)
+    - cron: "0 14 * * *"
+  workflow_dispatch:
+    inputs:
+      game_slug:
+        description: "Optional specific game slug to promote (leave empty for auto-rotation)"
+        required: false
+        default: ""
+      dry_run:
+        description: "Preview generated AI copy without posting"
+        type: boolean
+        default: false
+      include_devto:
+        description: "Also publish a Dev.to spotlight article"
+        type: boolean
+        default: false
+
+jobs:
+  promote:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Run SYNTHPLAY Auto-Publisher
+        env:
+          NEXT_PUBLIC_MAIN_DOMAIN: https://synthplay.games
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+          BLUESKY_HANDLE: ${{ secrets.BLUESKY_HANDLE }}
+          BLUESKY_APP_PASSWORD: ${{ secrets.BLUESKY_APP_PASSWORD }}
+          X_API_KEY: ${{ secrets.X_API_KEY }}
+          X_API_SECRET: ${{ secrets.X_API_SECRET }}
+          X_ACCESS_TOKEN: ${{ secrets.X_ACCESS_TOKEN }}
+          X_ACCESS_SECRET: ${{ secrets.X_ACCESS_SECRET }}
+          MASTODON_INSTANCE: ${{ secrets.MASTODON_INSTANCE }}
+          MASTODON_ACCESS_TOKEN: ${{ secrets.MASTODON_ACCESS_TOKEN }}
+          DEVTO_API_KEY: ${{ secrets.DEVTO_API_KEY }}
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          GAME_SLUG: ${{ github.event.inputs.game_slug }}
+          DRY_RUN: ${{ github.event.inputs.dry_run }}
+        run: |
+          ARGS=""
+          if [ "${{ github.event.inputs.include_devto }}" = "true" ]; then
+            ARGS="$ARGS --include-devto"
+          fi
+          node scripts/auto-publish.mjs $ARGS

@@ -4,6 +4,8 @@ import React, { useState } from "react";
 import type { GameRecord, SynthPlayStore } from "@synthplay/db";
 import { DICTIONARY, SUPPORTED_LOCALES } from "@synthplay/i18n";
 
+import type { GeneratedLaunchKit, GrowthChannelsStatus } from "@/lib/autoPromote";
+
 interface AdminData extends SynthPlayStore {
   countryPower: Array<{ countryCode: string; totalPlays: number; gameCount: number; avgRating: number }>;
 }
@@ -25,19 +27,25 @@ export function AdminConsole({
   adminEmail,
   isDefaultPassword,
   engine,
-  integrations
+  integrations,
+  growthChannels = { bluesky: false, x: false, mastodon: false, devto: false, discord: false, telegram: false }
 }: {
   initial: AdminData;
   adminEmail: string;
   isDefaultPassword: boolean;
   engine: { pg: boolean; redis: boolean };
   integrations: AdminIntegrationsStatus;
+  growthChannels?: GrowthChannelsStatus;
 }) {
   const [data, setData] = useState<AdminData>(initial);
-  const [tab, setTab] = useState<"overview" | "games" | "users" | "sponsors" | "finance" | "i18n">("overview");
+  const [tab, setTab] = useState<"overview" | "games" | "users" | "sponsors" | "finance" | "i18n" | "growth">("overview");
   const [userSearch, setUserSearch] = useState("");
   const [inspectGame, setInspectGame] = useState<GameRecord | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+  const [growthGameId, setGrowthGameId] = useState<string>(initial.games.find((g) => g.status === "published")?.id || "");
+  const [launchKit, setLaunchKit] = useState<GeneratedLaunchKit | null>(null);
+  const [growthBusy, setGrowthBusy] = useState(false);
+  const [publishResults, setPublishResults] = useState<Array<{ channel: string; status: string }>>([]);
 
   const handleLogout = async () => {
     await fetch("/api/auth/logout", { method: "POST" });
@@ -161,6 +169,10 @@ export function AdminConsole({
         <button className={`ops-nav-btn ${tab === "i18n" ? "active" : ""}`} onClick={() => setTab("i18n")}>
           <span>06. I18N LANGUAGES</span>
           <span>{SUPPORTED_LOCALES.length}</span>
+        </button>
+        <button className={`ops-nav-btn ${tab === "growth" ? "active" : ""}`} onClick={() => setTab("growth")}>
+          <span>07. AUTO GROWTH</span>
+          <span style={{ color: tab === "growth" ? "#07080b" : "var(--cyan)", fontSize: 10 }}>AI</span>
         </button>
 
         <div style={{ marginTop: "auto", paddingTop: 16, borderTop: "1px solid var(--line)", display: "grid", gap: 8 }}>
@@ -557,6 +569,212 @@ export function AdminConsole({
                   })}
                 </tbody>
               </table>
+            </div>
+          </div>
+        )}
+
+        {/* TAB 7: AUTO GROWTH & LAUNCH KIT */}
+        {tab === "growth" && (
+          <div style={{ display: "grid", gap: 18 }}>
+            <h1 className="font-display" style={{ margin: 0, fontSize: 24 }}>
+              AUTO GROWTH ENGINE &amp; 1-CLICK LAUNCH KIT (DEEPSEEK + OFFICIAL APIS)
+            </h1>
+
+            {/* Official Automated Channel Status */}
+            <div className="ops-card" style={{ display: "grid", gap: 12 }}>
+              <div className="font-mono" style={{ fontSize: 11, color: "var(--volt)" }}>
+                AUTOMATED DAILY CRON CHANNELS (GITHUB ACTIONS 14:00 UTC + 1-CLICK PUSH BELOW)
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 10 }} className="font-mono">
+                {[
+                  { name: "BLUESKY (FREE)", live: growthChannels.bluesky, env: "BLUESKY_HANDLE + APP_PASSWORD" },
+                  { name: "X / TWITTER (FREE)", live: growthChannels.x, env: "X_API_KEY + ACCESS_TOKEN" },
+                  { name: "DEV.TO (SEO BLOG)", live: growthChannels.devto, env: "DEVTO_API_KEY" },
+                  { name: "MASTODON (FREE)", live: growthChannels.mastodon, env: "MASTODON_INSTANCE + TOKEN" },
+                  { name: "DISCORD WEBHOOK", live: growthChannels.discord, env: "DISCORD_WEBHOOK_URL" },
+                  { name: "TELEGRAM CHANNEL", live: growthChannels.telegram, env: "TELEGRAM_BOT_TOKEN + CHAT_ID" }
+                ].map((ch) => (
+                  <div key={ch.name} style={{ padding: 10, border: "1px solid var(--line)", background: "rgba(255,255,255,0.02)", fontSize: 11 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                      <strong>{ch.name}</strong>
+                      <span style={{ color: ch.live ? "var(--cyan)" : "var(--amber)" }}>
+                        {ch.live ? "ARMED" : "STANDBY"}
+                      </span>
+                    </div>
+                    <div style={{ color: "var(--muted)", fontSize: 10 }}>{ch.env}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Game Selector + Generate + Push */}
+            <div className="ops-card" style={{ display: "grid", gap: 14 }}>
+              <div className="font-mono" style={{ fontSize: 11, color: "var(--cyan)" }}>
+                SELECT SPOTLIGHT GAME &amp; GENERATE AI LAUNCH COPY
+              </div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center" }}>
+                <select
+                  className="ops-input"
+                  style={{ maxWidth: 360 }}
+                  value={growthGameId}
+                  onChange={(e) => setGrowthGameId(e.target.value)}
+                >
+                  {data.games
+                    .filter((g) => g.status === "published")
+                    .map((g) => (
+                      <option key={g.id} value={g.id}>
+                        [{g.category}] {g.title} — /{g.slug}
+                      </option>
+                    ))}
+                </select>
+                <button
+                  type="button"
+                  className="ops-btn ops-btn-volt"
+                  disabled={growthBusy}
+                  onClick={async () => {
+                    setGrowthBusy(true);
+                    setPublishResults([]);
+                    try {
+                      const res = await fetch("/api/admin", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ action: "GENERATE_LAUNCH_KIT", gameId: growthGameId })
+                      });
+                      const json = await res.json();
+                      if (res.ok && json.kit) {
+                        setLaunchKit(json.kit);
+                        setToast("Generated fresh DeepSeek launch copy for all platforms!");
+                      } else {
+                        setToast(`ERROR: ${json.error || "Generation failed"}`);
+                      }
+                    } finally {
+                      setGrowthBusy(false);
+                      setTimeout(() => setToast(null), 4000);
+                    }
+                  }}
+                >
+                  {growthBusy ? "GENERATING WITH AI..." : "1. GENERATE AI COPY"}
+                </button>
+                <button
+                  type="button"
+                  className="ops-btn ops-btn-cyan"
+                  disabled={growthBusy}
+                  onClick={async () => {
+                    setGrowthBusy(true);
+                    try {
+                      const res = await fetch("/api/admin", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ action: "PUBLISH_GROWTH_NOW", gameId: growthGameId, kit: launchKit })
+                      });
+                      const json = await res.json();
+                      if (res.ok) {
+                        if (json.kit) setLaunchKit(json.kit);
+                        if (Array.isArray(json.results)) setPublishResults(json.results);
+                        if (json.store) setData((prev) => ({ ...prev, ...json.store }));
+                        setToast(
+                          json.results?.length > 0
+                            ? `Pushed to ${json.results.length} armed API channel(s)!`
+                            : "Copy ready! Add any social API secret in .env or GitHub Secrets to enable 1-click auto-posting."
+                        );
+                      } else {
+                        setToast(`ERROR: ${json.error || "Publish failed"}`);
+                      }
+                    } finally {
+                      setGrowthBusy(false);
+                      setTimeout(() => setToast(null), 4500);
+                    }
+                  }}
+                >
+                  2. AUTO-PUSH TO ARMED APIS ▶
+                </button>
+              </div>
+
+              {publishResults.length > 0 && (
+                <div className="font-mono" style={{ display: "flex", flexWrap: "wrap", gap: 8, fontSize: 11 }}>
+                  {publishResults.map((r) => (
+                    <span
+                      key={r.channel}
+                      style={{
+                        padding: "4px 10px",
+                        border: `1px solid ${r.status === "PUBLISHED" ? "var(--cyan)" : "var(--red)"}`,
+                        color: r.status === "PUBLISHED" ? "var(--cyan)" : "var(--red)"
+                      }}
+                    >
+                      {r.channel}: {r.status}
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              {launchKit && (
+                <div style={{ display: "grid", gap: 14, marginTop: 6 }}>
+                  {/* 1-Click Pre-Filled Human-Safe Launch Buttons */}
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                    <a
+                      href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(launchKit.shortSocialPost)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="ops-btn ops-btn-volt"
+                      style={{ textDecoration: "none" }}
+                    >
+                      OPEN X POST ↗
+                    </a>
+                    <a
+                      href={`https://www.reddit.com/r/WebGames/submit?url=${encodeURIComponent(launchKit.gameUrl)}&title=${encodeURIComponent(launchKit.redditTitle)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="ops-btn ops-btn-cyan"
+                      style={{ textDecoration: "none" }}
+                    >
+                      POST TO r/WebGames ↗
+                    </a>
+                    <a
+                      href={`https://www.reddit.com/r/SideProject/submit?title=${encodeURIComponent(launchKit.redditTitle)}&text=${encodeURIComponent(launchKit.redditBody)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="ops-btn ops-btn-cyan"
+                      style={{ textDecoration: "none" }}
+                    >
+                      POST TO r/SideProject ↗
+                    </a>
+                    <a
+                      href={`https://news.ycombinator.com/submitlink?u=${encodeURIComponent(launchKit.gameUrl)}&t=${encodeURIComponent(launchKit.hnTitle)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="ops-btn"
+                      style={{ textDecoration: "none" }}
+                    >
+                      SUBMIT SHOW HN ↗
+                    </a>
+                    <a
+                      href="https://www.producthunt.com/posts/new"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="ops-btn"
+                      style={{ textDecoration: "none" }}
+                    >
+                      PRODUCT HUNT ↗
+                    </a>
+                  </div>
+
+                  {/* Editable/Copyable Blocks */}
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 12 }}>
+                    <div style={{ display: "grid", gap: 6 }}>
+                      <div className="font-mono" style={{ fontSize: 10, color: "var(--volt)" }}>SHORT SOCIAL POST (X / BLUESKY / MASTODON)</div>
+                      <textarea className="ops-input" rows={5} value={launchKit.shortSocialPost} readOnly />
+                    </div>
+                    <div style={{ display: "grid", gap: 6 }}>
+                      <div className="font-mono" style={{ fontSize: 10, color: "var(--cyan)" }}>REDDIT / COMMUNITY BODY</div>
+                      <textarea className="ops-input" rows={5} value={`${launchKit.redditTitle}\n\n${launchKit.redditBody}`} readOnly />
+                    </div>
+                    <div style={{ display: "grid", gap: 6 }}>
+                      <div className="font-mono" style={{ fontSize: 10, color: "var(--muted)" }}>SHOW HN &amp; PRODUCT HUNT</div>
+                      <textarea className="ops-input" rows={5} value={`HN: ${launchKit.hnTitle}\n\nPH Tagline: ${launchKit.productHuntTagline}\n\nURL: ${launchKit.gameUrl}`} readOnly />
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}

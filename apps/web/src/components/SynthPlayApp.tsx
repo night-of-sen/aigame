@@ -1261,9 +1261,12 @@ export function SynthPlayApp({ initial }: { initial: InitialData }) {
         <div className="sp-container font-mono" style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", gap: 12, fontSize: 11, color: "var(--ink-muted)", padding: 0 }}>
           <span>SYNTHPLAY // SYNTHPLAY.GAMES · SANDBOX: *.SYNTHPLAY-BOX.CLOUD</span>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 18, alignItems: "center" }}>
+            <a href="/guides" style={{ color: "var(--volt)", textDecoration: "none" }}>GUIDES</a>
+            <a href="/play/all" style={{ color: "var(--ink-muted)", textDecoration: "none" }}>GENRES</a>
             <a href="/about" style={{ color: "var(--ink-muted)", textDecoration: "none" }}>ABOUT</a>
             <a href="/privacy" style={{ color: "var(--ink-muted)", textDecoration: "none" }}>PRIVACY POLICY</a>
             <a href="/terms" style={{ color: "var(--ink-muted)", textDecoration: "none" }}>TERMS OF SERVICE</a>
+            <a href="/rss.xml" style={{ color: "var(--ink-muted)", textDecoration: "none" }}>RSS</a>
             <a href="/llms.txt" style={{ color: "var(--ink-muted)", textDecoration: "none" }}>LLMS.TXT</a>
             <a href="mailto:support@synthplay.games" style={{ color: "var(--cyan)", textDecoration: "none" }}>support@synthplay.games</a>
           </div>

@@ -71,6 +71,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Space+Grotesk:wght@400;500;600;700&display=swap"
         />
         <link rel="alternate" type="text/plain" title="LLMs.txt — AI Crawler Index" href="/llms.txt" />
+        <link rel="alternate" type="application/rss+xml" title="SYNTHPLAY RSS Feed" href="/rss.xml" />
         {ADSENSE_CLIENT.startsWith("ca-pub-") && (
           <>
             <meta name="google-adsense-account" content={ADSENSE_CLIENT} />

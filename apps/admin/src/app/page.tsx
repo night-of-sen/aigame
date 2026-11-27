@@ -10,6 +10,7 @@ import {
 } from "@synthplay/db";
 import { AdminConsole } from "@/components/AdminConsole";
 import { AdminLogin } from "@/components/AdminLogin";
+import { getGrowthChannelsStatus } from "@/lib/autoPromote";
 
 export const dynamic = "force-dynamic";
 
@@ -48,6 +49,7 @@ export default async function AdminHomePage() {
     meili: meiliOk,
     turnstile: isSet(process.env.TURNSTILE_SECRET_KEY)
   };
+  const growthChannels = getGrowthChannelsStatus();
 
   return (
     <AdminConsole
@@ -55,6 +57,7 @@ export default async function AdminHomePage() {
       isDefaultPassword={isDefaultPassword}
       engine={engine}
       integrations={integrations}
+      growthChannels={growthChannels}
       initial={{
         ...store,
         countryPower: computeCountryPowerRankings(store.games)
