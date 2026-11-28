@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import type { GameRecord, ReviewRecord } from "@synthplay/db";
 import { readFavoriteIds, toggleFavoriteId } from "@/lib/favorites";
@@ -20,6 +20,8 @@ export function GameDetailClient({
   relatedGames?: GameRecord[];
 }) {
   const [playing, setPlaying] = useState(false);
+  const playingRef = useRef(false);
+  const modalPushedRef = useRef(false);
   const [plays, setPlays] = useState(game.totalValidPlays);
   const [reviews, setReviews] = useState<ReviewRecord[]>(initialReviews);
   const [gameplayScore, setGameplayScore] = useState(5);
@@ -33,8 +35,46 @@ export function GameDetailClient({
   const [msg, setMsg] = useState<string | null>(null);
 
   useEffect(() => {
+    playingRef.current = playing;
+  }, [playing]);
+
+  useEffect(() => {
     setIsFav(readFavoriteIds().includes(game.id));
   }, [game.id]);
+
+  useEffect(() => {
+    const onPopState = (ev: PopStateEvent) => {
+      const st = ev.state as { spDetailModal?: boolean } | null;
+      if (playingRef.current && !st?.spDetailModal) {
+        modalPushedRef.current = false;
+        setPlaying(false);
+      }
+    };
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, []);
+
+  const openCabinet = useCallback(() => {
+    if (typeof window !== "undefined") {
+      try {
+        window.history.pushState({ spDetailModal: true }, "", "#play");
+        modalPushedRef.current = true;
+      } catch {
+        modalPushedRef.current = false;
+      }
+    }
+    setPlaying(true);
+  }, []);
+
+  const closeCabinet = useCallback(() => {
+    if (typeof window !== "undefined" && modalPushedRef.current) {
+      modalPushedRef.current = false;
+      setPlaying(false);
+      window.history.back();
+      return;
+    }
+    setPlaying(false);
+  }, []);
 
   const handleToggleFav = () => {
     const next = toggleFavoriteId(game.id);
@@ -128,7 +168,7 @@ export function GameDetailClient({
             <button type="button" className="btn-steel sp-ctrl-pill font-mono" onClick={shareUrl}>
               <span>{copied ? "COPIED!" : "COPY LINK"}</span>
             </button>
-            <button type="button" className="btn-volt sp-signin-btn" onClick={() => setPlaying(true)}>
+            <button type="button" className="btn-volt sp-signin-btn" onClick={openCabinet}>
               <IconPlay size={14} />
               <span>PLAY FREE</span>
             </button>
@@ -158,7 +198,7 @@ export function GameDetailClient({
                   {game.taglineZh} — {game.tagline}
                 </p>
               </div>
-              <button type="button" className="btn-volt" onClick={() => setPlaying(true)}>
+              <button type="button" className="btn-volt" onClick={openCabinet}>
                 <IconPlay size={16} />
                 <span>BOOT ARCADE CABINET</span>
               </button>
@@ -341,7 +381,7 @@ export function GameDetailClient({
         <ArcadeCabinetModal
           game={game}
           playerCountry="JP"
-          onClose={() => setPlaying(false)}
+          onClose={closeCabinet}
           onPlayCounted={(_id, total) => setPlays(total)}
           onOpenSponsor={() => { window.location.href = "/"; }}
         />

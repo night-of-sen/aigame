@@ -4,19 +4,33 @@
 	<meta charset="UTF-8">
 	<title>MONOLITH BREAKER: UNDERRUN — SYNTHPLAY 3D WebGL</title>
 	<style>
-		html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:#050608;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;}
+		html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:#050608;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;touch-action:none;user-select:none;-webkit-user-select:none;}
 		div:last-child {color: #F3FF00;}
 		b{animation: r 1s infinite;}
 		@keyframes r {50%{opacity:0;}}
-		#c{width:100vw;height:100vh;object-fit:contain;display:block;image-rendering:optimizeSpeed;image-rendering:pixelated;cursor:url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAcAAAAHAQMAAAD+nMWQAAAABGdBTUEAALGPC/xhBQAAAAZQTFRFAAAA////pdmf3QAAAAF0Uk5TAEDm2GYAAAATSURBVAjXYxBgEGBgYDgGxEAWAAc4AQebSvKuAAAAAElFTkSuQmCC),crosshair;}
+		#c{width:100vw;height:100vh;object-fit:contain;display:block;image-rendering:optimizeSpeed;image-rendering:pixelated;cursor:url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAcAAAAHAQMAAAD+nMWQAAAABGdBTUEAALGPC/xhBQAAAAZQTFRFAAAA////pdmf3QAAAAF0Uk5TAEDm2GYAAAATSURBVAjXYxBgEGBgYDgGxEAWAAc4AQebSvKuAAAAAElFTkSuQmCC),crosshair;touch-action:none;}
 		#a{font-weight:bold;color:#00F0D4;position:absolute;top:16px;left:18px;font-size:clamp(11px,1.5vw,16px);overflow:hidden;white-space:nowrap;width:94%;text-shadow:0 0 10px rgba(0,240,212,0.55);transition:opacity 1s;pointer-events:none;}
-		#sp-hint{position:fixed;bottom:10px;right:14px;font-size:11px;color:rgba(243,255,0,0.85);background:rgba(7,8,11,0.75);border:1px solid rgba(243,255,0,0.35);padding:4px 8px;pointer-events:none;z-index:20;}
+		#sp-hint{position:fixed;top:10px;right:12px;font-size:10px;color:rgba(243,255,0,0.9);background:rgba(7,8,11,0.78);border:1px solid rgba(243,255,0,0.35);padding:4px 8px;z-index:35;display:flex;align-items:center;gap:8px;}
+		#u-tbtn{background:#121722;color:#00F0D4;border:1px solid rgba(0,240,212,0.5);padding:2px 6px;font:700 10px monospace;cursor:pointer;}
+		#u-touch{position:fixed;inset:0;z-index:30;pointer-events:none;display:none;}
+		body.touch-on.playing #u-touch{display:block;}
+		.u-stick{position:absolute;bottom:18px;width:122px;height:122px;border-radius:50%;background:rgba(7,8,11,0.44);pointer-events:auto;touch-action:none;display:flex;align-items:center;justify-content:center;}
+		#u-move{left:16px;border:2px solid rgba(0,240,212,0.5);}
+		#u-aim{right:16px;border:2px solid rgba(255,42,60,0.65);}
+		.u-nub{width:46px;height:46px;border-radius:50%;pointer-events:none;}
+		#u-move .u-nub{background:rgba(0,240,212,0.72);border:2px solid #F3FF00;}
+		#u-aim .u-nub{background:rgba(255,42,60,0.78);border:2px solid #F3FF00;}
+		.u-lbl{position:absolute;bottom:-18px;font-size:9px;color:#b8c0d0;letter-spacing:0.1em;pointer-events:none;}
 	</style>
 </head>
 <body style="margin:0;background:#050608">
 	<canvas id="c" width=320 height=180></canvas>
 	<code id="a"></code>
-	<div id="sp-hint">WASD MOVE · MOUSE AIM &amp; FIRE · REBOOT ALL SERVER CORES · CLICK TO DEPLOY</div>
+	<div id="sp-hint"><span>TAP/CLICK DEPLOY · MOVE &amp; SHOOT</span><button id="u-tbtn" type="button">🎮 TOUCH</button></div>
+	<div id="u-touch">
+		<div id="u-move" class="u-stick"><div id="u-move-nub" class="u-nub"></div><span class="u-lbl">MOVE</span></div>
+		<div id="u-aim" class="u-stick"><div id="u-aim-nub" class="u-nub"></div><span class="u-lbl">AIM &amp; FIRE</span></div>
+	</div>
 	<script type="text/javascript" src="source/game.js"></script>
 	<script type="text/javascript" src="source/random.js"></script>
 	<script type="text/javascript" src="source/renderer.js"></script>

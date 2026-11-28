@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import type { GameRecord, SponsorSlotRecord } from "@synthplay/db";
 import { COUNTRIES, SUPPORTED_LOCALES, getCountryName, type Locale, t } from "@synthplay/i18n";
@@ -124,11 +124,64 @@ export function SynthPlayApp({ initial }: { initial: InitialData }) {
     setTimeout(() => setHeroSwitching(false), 380);
   }, []);
 
+  const activeGameRef = useRef<GameRecord | null>(null);
+  const viewRef = useRef<"arcade" | "studio" | "dashboard" | "sponsor">("arcade");
+  const modalPushedRef = useRef(false);
+
+  useEffect(() => {
+    activeGameRef.current = activeGame;
+  }, [activeGame]);
+
+  useEffect(() => {
+    viewRef.current = view;
+  }, [view]);
+
+  // Keep mobile / browser Back button inside SYNTHPLAY:
+  // Back from a running game closes the cabinet back to the homepage;
+  // Back from Upload/Dashboard/Sponsor returns to Arcade Hall.
+  useEffect(() => {
+    const onPopState = (ev: PopStateEvent) => {
+      const st = ev.state as { spModal?: string; spView?: "arcade" | "studio" | "dashboard" | "sponsor" } | null;
+      if (activeGameRef.current && st?.spModal !== "game") {
+        modalPushedRef.current = false;
+        setActiveGame(null);
+        return;
+      }
+      if (!st?.spModal && activeGameRef.current) {
+        modalPushedRef.current = false;
+        setActiveGame(null);
+        return;
+      }
+      const targetView = st?.spView || "arcade";
+      if (targetView !== viewRef.current) {
+        setView(targetView);
+        window.scrollTo({ top: 0, behavior: "instant" as ScrollBehavior });
+      }
+    };
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, []);
+
   // Switch page view with snappy Cyberpunk Laser Shutter transition
   const navigateView = (nextView: "arcade" | "studio" | "dashboard" | "sponsor", label: string) => {
     setMobileMenuOpen(false);
+    if (activeGameRef.current) {
+      modalPushedRef.current = false;
+      setActiveGame(null);
+    }
     if (nextView === view) return;
     arcadeAudio.playSwitch();
+    if (typeof window !== "undefined") {
+      try {
+        window.history.pushState(
+          { spView: nextView },
+          "",
+          nextView === "arcade" ? window.location.pathname : `#view-${nextView}`
+        );
+      } catch {
+        // ignore history errors
+      }
+    }
     setShutter({ active: true, label });
     setTimeout(() => {
       setView(nextView);
@@ -185,8 +238,26 @@ export function SynthPlayApp({ initial }: { initial: InitialData }) {
   const launchGame = (game: GameRecord) => {
     arcadeAudio.playCoin();
     setHoveredCardId(null);
+    if (typeof window !== "undefined") {
+      try {
+        window.history.pushState({ spModal: "game", spView: viewRef.current, slug: game.slug }, "", `#play-${game.slug}`);
+        modalPushedRef.current = true;
+      } catch {
+        modalPushedRef.current = false;
+      }
+    }
     setActiveGame(game);
   };
+
+  const closeGame = useCallback(() => {
+    if (typeof window !== "undefined" && modalPushedRef.current) {
+      modalPushedRef.current = false;
+      setActiveGame(null);
+      window.history.back();
+      return;
+    }
+    setActiveGame(null);
+  }, []);
 
   // 3D perspective tilt + specular light sheen on game cards
   const handleCardMouseMove = (e: React.MouseEvent<HTMLElement>) => {
@@ -1239,7 +1310,7 @@ export function SynthPlayApp({ initial }: { initial: InitialData }) {
         <ArcadeCabinetModal
           game={activeGame}
           playerCountry={country}
-          onClose={() => setActiveGame(null)}
+          onClose={closeGame}
           onPlayCounted={(gameId, newTotal) => {
             setGames((prev) =>
               prev.map((g) => (g.id === gameId ? { ...g, totalValidPlays: newTotal } : g))

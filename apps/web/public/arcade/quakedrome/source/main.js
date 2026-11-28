@@ -122,10 +122,19 @@ game_load = async () => {
 	r_submit_buffer();
 	requestAnimationFrame(run_frame);
 
-	f.onclick = () => g.requestFullscreen();
-	g.onclick = () => {
-		g.onclick = () => c.requestPointerLock();
-		g.onclick();
+	f.onclick = () => g.requestFullscreen && g.requestFullscreen().catch?.(() => {});
+	const startGame = () => {
+		const isTouch = document.body.classList.contains('touch-on') || ('ontouchstart' in window && navigator.maxTouchPoints > 0);
+		g.onclick = () => {
+			if (!isTouch && c.requestPointerLock) {
+				try { c.requestPointerLock(); } catch (e) {}
+			}
+		};
+		g.ontouchend = null;
+		if (!isTouch && c.requestPointerLock) {
+			try { c.requestPointerLock(); } catch (e) {}
+		}
+		document.body.classList.add('playing');
 		
 		audio_init();
 
@@ -155,6 +164,8 @@ game_load = async () => {
 		game_init(0);
 		run_frame = game_run;
 	};
+	g.onclick = startGame;
+	g.ontouchend = (ev) => { ev.preventDefault(); startGame(); };
 },
 
 run_frame = (time_now) => {

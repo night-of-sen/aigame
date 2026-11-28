@@ -194,8 +194,8 @@ export function ArcadeCabinetModal({
             >
               ⛶ FULLSCREEN
             </button>
-            <button className="btn-steel" onClick={onClose} style={{ padding: "8px 16px" }}>
-              ESC / EXIT
+            <button className="btn-steel" onClick={onClose} style={{ padding: "8px 14px" }}>
+              ← BACK
             </button>
           </div>
         </div>
