@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="UTF-8">
+	<title>MONOLITH BREAKER: UNDERRUN — SYNTHPLAY 3D WebGL</title>
+	<style>
+		html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:#050608;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;}
+		div:last-child {color: #F3FF00;}
+		b{animation: r 1s infinite;}
+		@keyframes r {50%{opacity:0;}}
+		#c{width:100vw;height:100vh;object-fit:contain;display:block;image-rendering:optimizeSpeed;image-rendering:pixelated;cursor:url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAcAAAAHAQMAAAD+nMWQAAAABGdBTUEAALGPC/xhBQAAAAZQTFRFAAAA////pdmf3QAAAAF0Uk5TAEDm2GYAAAATSURBVAjXYxBgEGBgYDgGxEAWAAc4AQebSvKuAAAAAElFTkSuQmCC),crosshair;}
+		#a{font-weight:bold;color:#00F0D4;position:absolute;top:16px;left:18px;font-size:clamp(11px,1.5vw,16px);overflow:hidden;white-space:nowrap;width:94%;text-shadow:0 0 10px rgba(0,240,212,0.55);transition:opacity 1s;pointer-events:none;}
+		#sp-hint{position:fixed;bottom:10px;right:14px;font-size:11px;color:rgba(243,255,0,0.85);background:rgba(7,8,11,0.75);border:1px solid rgba(243,255,0,0.35);padding:4px 8px;pointer-events:none;z-index:20;}
+	</style>
+</head>
+<body style="margin:0;background:#050608">
+	<canvas id="c" width=320 height=180></canvas>
+	<code id="a"></code>
+	<div id="sp-hint">WASD MOVE · MOUSE AIM &amp; FIRE · REBOOT ALL SERVER CORES · CLICK TO DEPLOY</div>
+	<script type="text/javascript" src="source/game.js"></script>
+	<script type="text/javascript" src="source/random.js"></script>
+	<script type="text/javascript" src="source/renderer.js"></script>
+	<script type="text/javascript" src="source/entity.js"></script>
+	<script type="text/javascript" src="source/entity-cpu.js"></script>
+	<script type="text/javascript" src="source/entity-player.js"></script>
+	<script type="text/javascript" src="source/entity-plasma.js"></script>
+	<script type="text/javascript" src="source/entity-spider.js"></script>
+	<script type="text/javascript" src="source/entity-sentry.js"></script>
+	<script type="text/javascript" src="source/entity-particle.js"></script>
+	<script type="text/javascript" src="source/entity-health.js"></script>
+	<script type="text/javascript" src="source/entity-explosion.js"></script>
+
+	<script type="text/javascript" src="source/sonantx-reduced.js"></script>
+	<script type="text/javascript" src="source/music-dark-meat-beat.js"></script>
+	<script type="text/javascript" src="source/sound-effects.js"></script>
+	<script type="text/javascript" src="source/audio.js"></script>
+
+	<script type="text/javascript" src="source/terminal.js"></script>
+	<script type="text/javascript" src="source/main.js"></script>
+</body></html>

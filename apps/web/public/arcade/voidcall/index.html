@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="UTF-8">
+	<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+	<meta name="apple-mobile-web-app-capable" content="yes">
+	<meta name="mobile-web-app-capable" content="yes">
+	<meta name="viewport" content="width=device-width, height=device-height, initial-scale=1, user-scalable=no, viewport-fit=cover">
+	<title>KEPLER RING: VOIDCALL RTS — SYNTHPLAY 3D WebGL</title>
+	<style>
+		* {font-size:1.2vw;-webkit-touch-callout:none;-webkit-user-select:none;margin:0;box-sizing:border-box;}
+		html,body{width:100%;height:100%;overflow:hidden;background:#050608;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;}
+		#a,#t,#p,#pc,#pu{position:absolute;}
+		#c{display:block;width:100vw;height:100vh;}
+		#p{top:10px;right:14px;height:6px;width:140px;background:rgba(0,0,0,0.7);display:none;}
+		#pc,#pu{height:100%;background:rgba(0,240,212,0.9);transition:width 1s;width:0;}
+		#pu{background:none;border-right:2px solid #F3FF00;}
+		#a{top:14px;left:16px;font-size:clamp(11px,1.2vw,15px);width:94%;text-shadow:0 0 8px rgba(0,240,212,0.7);color:#fff;pointer-events:none;}
+		#t{inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;color:#fff;background:radial-gradient(circle,rgba(7,8,11,0.18),rgba(7,8,11,0.72));cursor:pointer;padding:20px;}
+		h1{font-size:clamp(30px,7vw,78px);letter-spacing:0.12em;color:#F3FF00;text-shadow:0 0 24px rgba(243,255,0,0.45);margin:0 0 10px 0;}
+		#t .sub{font-size:clamp(12px,1.5vw,16px);color:#00F0D4;letter-spacing:0.12em;margin-bottom:14px;}
+		#t .cred{font-size:11px;color:#b8c0d0;line-height:1.6;}
+	</style>
+</head>
+<body style="background:#050608">
+	<canvas id="c"></canvas>
+	<code id="a"><div id="p"><div id="pc"></div><div id="pu"></div></div></code>
+	<div id="t">
+		<h1>KEPLER VOIDCALL</h1>
+		<div class="sub">▶ CLICK ANYWHERE TO LAUNCH 3D REAL-TIME STRATEGY</div>
+		<div class="cred">COMMAND DROP-POD · HARVEST ENERGY WELLS · BUILD TURRETS &amp; MECH SQUADS<br/>POWERED BY VOIDCALL (MIT) BY DOMINIC SZABLEWSKI · MUSIC BY ANDREAS LÖSCH</div>
+	</div>
+	<script type="text/javascript" src="source/defs.js"></script>
+	<script type="text/javascript" src="source/utils.js"></script>
+	<script type="text/javascript" src="source/perlin_noise.js"></script>
+	<script type="text/javascript" src="source/model.js"></script>
+	<script type="text/javascript" src="source/map.js"></script>
+	<script type="text/javascript" src="source/renderer.js"></script>
+	<script type="text/javascript" src="source/input.js"></script>
+	<script type="text/javascript" src="source/entity.js"></script>
+	<script type="text/javascript" src="source/entity_unit.js"></script>
+	<script type="text/javascript" src="source/entity_unit_tech.js"></script>
+	<script type="text/javascript" src="source/entity_unit_med.js"></script>
+	<script type="text/javascript" src="source/entity_unit_grunt.js"></script>
+	<script type="text/javascript" src="source/entity_enemy.js"></script>
+	<script type="text/javascript" src="source/entity_unit_turret.js"></script>
+	<script type="text/javascript" src="source/entity_cursor.js"></script>
+	<script type="text/javascript" src="source/entity_lander.js"></script>
+	<script type="text/javascript" src="source/entity_particle.js"></script>
+	<script type="text/javascript" src="source/entity_well.js"></script>
+	<script type="text/javascript" src="source/entity_unit_harvester.js"></script>
+	<script type="text/javascript" src="source/astar.js"></script>
+	<script type="text/javascript" src="source/game.js"></script>
+
+	<script type="text/javascript" src="source/music_i_wish_we_are_alone_in_the_universe.js"></script>
+	<script type="text/javascript" src="source/sound_effects.js"></script>
+	<script type="text/javascript" src="source/audio.js"></script>
+
+	<script type="text/javascript" src="source/main.js"></script>
+</body></html>

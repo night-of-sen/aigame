@@ -39,15 +39,16 @@ loop();
 </html>`;
 
 const CATEGORIES = [
+  { value: "FPS", label: "3D FPS / SHOOTER" },
+  { value: "RACING", label: "RACING / DRIFT" },
   { value: "ARCADE", label: "ARCADE" },
   { value: "PUZZLE", label: "PUZZLE" },
   { value: "SURVIVAL", label: "SURVIVAL / ROGUELITE" },
   { value: "BRICK", label: "BRICK BREAKER" },
-  { value: "RACING", label: "RACING / DRIFT" },
   { value: "SHMUP", label: "SHMUP / BULLET HELL" },
   { value: "ROGUELIKE", label: "ROGUELIKE / DUNGEON" },
   { value: "TACTICS", label: "TACTICS / MECHA" },
-  { value: "STRATEGY", label: "STRATEGY / SIM" },
+  { value: "STRATEGY", label: "STRATEGY / RTS" },
   { value: "AI NOIR", label: "AI INTERACTIVE / NPC" }
 ];
 

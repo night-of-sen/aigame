@@ -223,8 +223,8 @@ async function ensurePgReady(): Promise<boolean> {
         }
         for (const g of seed.games) {
           await sql`
-            INSERT INTO sp_games (id, slug, title, title_zh, tagline, tagline_zh, creator_id, creator_name, creator_country_code, play_type, category, is_ai_created, ai_tools, ai_prompt_note, cover_image, accent_color, status, total_valid_plays, plays_24h, rating, country_plays, sandbox_html, security_score, security_verdict, creator_tip_url, published_at)
-            VALUES (${g.id}, ${g.slug}, ${g.title}, ${g.titleZh}, ${g.tagline}, ${g.taglineZh}, ${g.creatorId}, ${g.creatorName}, ${g.creatorCountryCode}, ${g.playType}, ${g.category}, ${g.isAiCreated}, ${sql.json(g.aiTools)}, ${g.aiPromptNote}, ${g.coverImage}, ${g.accentColor}, ${g.status}, ${g.totalValidPlays}, ${g.plays24h}, ${g.rating}, ${sql.json(g.countryPlays)}, ${g.sandboxHtml ?? null}, ${g.securityScore}, ${g.securityVerdict}, ${g.creatorTipUrl ?? null}, ${g.publishedAt})
+            INSERT INTO sp_games (id, slug, title, title_zh, tagline, tagline_zh, translations, creator_id, creator_name, creator_country_code, play_type, category, is_ai_created, ai_tools, ai_prompt_note, cover_image, accent_color, status, total_valid_plays, plays_24h, rating, country_plays, sandbox_html, sandbox_url, security_score, security_verdict, creator_tip_url, published_at)
+            VALUES (${g.id}, ${g.slug}, ${g.title}, ${g.titleZh}, ${g.tagline}, ${g.taglineZh}, ${sql.json((g.translations || {}) as unknown as postgres.JSONValue)}, ${g.creatorId}, ${g.creatorName}, ${g.creatorCountryCode}, ${g.playType}, ${g.category}, ${g.isAiCreated}, ${sql.json(g.aiTools)}, ${g.aiPromptNote}, ${g.coverImage}, ${g.accentColor}, ${g.status}, ${g.totalValidPlays}, ${g.plays24h}, ${g.rating}, ${sql.json(g.countryPlays)}, ${g.sandboxHtml ?? null}, ${g.sandboxUrl ?? null}, ${g.securityScore}, ${g.securityVerdict}, ${g.creatorTipUrl ?? null}, ${g.publishedAt})
             ON CONFLICT (id) DO NOTHING
           `;
         }
@@ -291,6 +291,42 @@ async function ensurePgReady(): Promise<boolean> {
           `;
         }
         await sql`INSERT INTO sp_meta (key, value_int) VALUES ('seed_wave2_games_v1', 1) ON CONFLICT (key) DO UPDATE SET value_int = 1`;
+      }
+
+      // Wave 3 real 3D WebGL & open-source flagship upgrade migration (idempotent)
+      const wave3Flag = await sql<{ value_int: number }[]>`SELECT value_int FROM sp_meta WHERE key = 'seed_wave3_3d_webgl_v1'`;
+      if (wave3Flag.length === 0) {
+        const seed = getDefaultStoreSnapshot();
+        const upgrades = seed.games.filter((g) => ["gm-001", "gm-005", "gm-006"].includes(g.id));
+        for (const g of upgrades) {
+          await sql`
+            UPDATE sp_games
+            SET title = ${g.title},
+                title_zh = ${g.titleZh},
+                tagline = ${g.tagline},
+                tagline_zh = ${g.taglineZh},
+                ai_tools = ${sql.json(g.aiTools)},
+                ai_prompt_note = ${g.aiPromptNote},
+                sandbox_url = ${g.sandboxUrl ?? null}
+            WHERE id = ${g.id}
+          `;
+        }
+        const wave3 = seed.games.filter((g) => ["gm-012", "gm-013", "gm-014"].includes(g.id));
+        for (const g of wave3) {
+          await sql`
+            INSERT INTO sp_games (id, slug, title, title_zh, tagline, tagline_zh, translations, creator_id, creator_name, creator_country_code, play_type, category, is_ai_created, ai_tools, ai_prompt_note, cover_image, accent_color, status, total_valid_plays, plays_24h, rating, country_plays, sandbox_html, sandbox_url, security_score, security_verdict, creator_tip_url, published_at)
+            VALUES (${g.id}, ${g.slug}, ${g.title}, ${g.titleZh}, ${g.tagline}, ${g.taglineZh}, ${sql.json((g.translations || {}) as unknown as postgres.JSONValue)}, ${g.creatorId}, ${g.creatorName}, ${g.creatorCountryCode}, ${g.playType}, ${g.category}, ${g.isAiCreated}, ${sql.json(g.aiTools)}, ${g.aiPromptNote}, ${g.coverImage}, ${g.accentColor}, ${g.status}, ${g.totalValidPlays}, ${g.plays24h}, ${g.rating}, ${sql.json(g.countryPlays)}, ${g.sandboxHtml ?? null}, ${g.sandboxUrl ?? null}, ${g.securityScore}, ${g.securityVerdict}, ${g.creatorTipUrl ?? null}, ${g.publishedAt})
+            ON CONFLICT (id) DO UPDATE SET
+              sandbox_url = EXCLUDED.sandbox_url,
+              cover_image = EXCLUDED.cover_image,
+              title = EXCLUDED.title,
+              title_zh = EXCLUDED.title_zh,
+              tagline = EXCLUDED.tagline,
+              tagline_zh = EXCLUDED.tagline_zh,
+              translations = EXCLUDED.translations
+          `;
+        }
+        await sql`INSERT INTO sp_meta (key, value_int) VALUES ('seed_wave3_3d_webgl_v1', 1) ON CONFLICT (key) DO UPDATE SET value_int = 1`;
       }
 
       pgAvailable = true;

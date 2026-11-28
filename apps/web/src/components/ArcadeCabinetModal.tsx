@@ -180,6 +180,20 @@ export function ArcadeCabinetModal({
                 <span>{submittingScore ? "SAVING..." : `POST SCORE (${sdkScore.toLocaleString()})`}</span>
               </button>
             )}
+            <button
+              type="button"
+              className="btn-steel font-mono"
+              onClick={() => {
+                const target = iframeRef.current;
+                if (target && target.requestFullscreen) {
+                  target.requestFullscreen().catch(() => {});
+                }
+              }}
+              style={{ padding: "8px 12px", fontSize: 11 }}
+              title="Fullscreen Game"
+            >
+              ⛶ FULLSCREEN
+            </button>
             <button className="btn-steel" onClick={onClose} style={{ padding: "8px 16px" }}>
               ESC / EXIT
             </button>
@@ -192,21 +206,25 @@ export function ArcadeCabinetModal({
             <iframe
               ref={iframeRef}
               title={game.title}
+              allow="fullscreen; pointer-lock; autoplay; gamepad"
+              allowFullScreen
               sandbox={
-                game.sandboxUrl.startsWith("https://")
+                game.sandboxUrl.startsWith("https://") || game.sandboxUrl.startsWith("/arcade/")
                   ? "allow-scripts allow-pointer-lock allow-same-origin"
                   : "allow-scripts allow-pointer-lock"
               }
               src={game.sandboxUrl}
-              style={{ width: "100%", height: 460, border: 0, display: "block", background: "#07080b" }}
+              style={{ width: "100%", height: "min(68vh, 560px)", minHeight: 420, border: 0, display: "block", background: "#07080b" }}
             />
           ) : game.sandboxHtml ? (
             <iframe
               ref={iframeRef}
               title={game.title}
+              allow="fullscreen; pointer-lock; autoplay"
+              allowFullScreen
               sandbox="allow-scripts allow-pointer-lock"
               srcDoc={game.sandboxHtml}
-              style={{ width: "100%", height: 460, border: 0, display: "block", background: "#07080b" }}
+              style={{ width: "100%", height: "min(68vh, 560px)", minHeight: 420, border: 0, display: "block", background: "#07080b" }}
             />
           ) : (
             <BuiltInGameRouter game={game} onScore={(s) => setSdkScore((prev) => Math.max(prev, s))} />
