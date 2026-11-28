@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import type { GameRecord, ScoreRecord } from "@synthplay/db";
 import { IconShield, IconSpark, IconTrophy } from "./Icons";
 import { BuiltInGameRouter } from "./games/BuiltInGameRouter";
@@ -12,6 +12,8 @@ interface ArcadeCabinetModalProps {
   onPlayCounted: (gameId: string, newTotal: number) => void;
   onOpenSponsor: () => void;
 }
+
+const ARCADE_ASSET_VERSION = "v3";
 
 export function ArcadeCabinetModal({
   game,
@@ -27,6 +29,21 @@ export function ArcadeCabinetModal({
   const [scoreStatus, setScoreStatus] = useState<string | null>(null);
   const [submittingScore, setSubmittingScore] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
+  const onCloseRef = useRef(onClose);
+  const onPlayCountedRef = useRef(onPlayCounted);
+
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
+
+  useEffect(() => {
+    onPlayCountedRef.current = onPlayCounted;
+  }, [onPlayCounted]);
+
+  // Referentially stable score callback so built-in games NEVER reset their animation loop on modal re-renders
+  const handleBuiltInScore = useCallback((s: number) => {
+    setSdkScore((prev) => (s > prev ? s : prev));
+  }, []);
 
   // Load existing top high scores for this cabinet
   useEffect(() => {
@@ -41,11 +58,11 @@ export function ArcadeCabinetModal({
   // ESC to close cabinet
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") onCloseRef.current();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
+  }, []);
 
   // Anti-cheat visible-play heartbeat timer (10s visible play records a valid play)
   useEffect(() => {
@@ -70,7 +87,7 @@ export function ArcadeCabinetModal({
           .then((d) => {
             if (d.counted) {
               setCounted(true);
-              onPlayCounted(game.id, d.totalValidPlays);
+              onPlayCountedRef.current(game.id, d.totalValidPlays);
             }
           })
           .catch(() => {});
@@ -78,7 +95,7 @@ export function ArcadeCabinetModal({
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [game.id, onPlayCounted, playerCountry]);
+  }, [game.id, playerCountry]);
 
   // Listen for SynthPlay Game SDK postMessage events (SCORE / SAVE_STATE / LOAD_STATE / OPEN_TIP)
   useEffect(() => {
@@ -134,6 +151,12 @@ export function ArcadeCabinetModal({
       setSubmittingScore(false);
     }
   };
+
+  const resolvedSandboxUrl = game.sandboxUrl
+    ? game.sandboxUrl.startsWith("/arcade/")
+      ? `${game.sandboxUrl}${game.sandboxUrl.includes("?") ? "&" : "?"}${ARCADE_ASSET_VERSION}`
+      : game.sandboxUrl
+    : undefined;
 
   return (
     <div className="modal-backdrop" role="dialog" aria-modal="true">
@@ -202,18 +225,18 @@ export function ArcadeCabinetModal({
 
         {/* Game Viewport */}
         <div style={{ position: "relative", border: "1px solid var(--hairline-strong)", background: "#050608", overflow: "hidden" }}>
-          {game.sandboxUrl ? (
+          {resolvedSandboxUrl ? (
             <iframe
               ref={iframeRef}
               title={game.title}
               allow="fullscreen; pointer-lock; autoplay; gamepad"
               allowFullScreen
               sandbox={
-                game.sandboxUrl.startsWith("https://") || game.sandboxUrl.startsWith("/arcade/")
+                resolvedSandboxUrl.startsWith("https://") || resolvedSandboxUrl.startsWith("/arcade/")
                   ? "allow-scripts allow-pointer-lock allow-same-origin"
                   : "allow-scripts allow-pointer-lock"
               }
-              src={game.sandboxUrl}
+              src={resolvedSandboxUrl}
               style={{ width: "100%", height: "min(68vh, 560px)", minHeight: 420, border: 0, display: "block", background: "#07080b" }}
             />
           ) : game.sandboxHtml ? (
@@ -227,7 +250,7 @@ export function ArcadeCabinetModal({
               style={{ width: "100%", height: "min(68vh, 560px)", minHeight: 420, border: 0, display: "block", background: "#07080b" }}
             />
           ) : (
-            <BuiltInGameRouter game={game} onScore={(s) => setSdkScore((prev) => Math.max(prev, s))} />
+            <BuiltInGameRouter game={game} onScore={handleBuiltInScore} />
           )}
         </div>
 

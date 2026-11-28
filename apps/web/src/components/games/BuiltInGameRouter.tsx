@@ -13,7 +13,7 @@ import { Volt2048Game } from "./Volt2048Game";
 import { PulseBreakerGame } from "./PulseBreakerGame";
 import { HyperSurvivorGame } from "./HyperSurvivorGame";
 
-export function BuiltInGameRouter({
+export const BuiltInGameRouter = React.memo(function BuiltInGameRouter({
   game,
   onScore
 }: {
@@ -54,4 +54,4 @@ export function BuiltInGameRouter({
     return <KeplerRingGame onScore={onScore} />;
   }
   return <CrimsonDanmakuGame onScore={onScore} />;
-}
+});

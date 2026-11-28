@@ -123,7 +123,10 @@ game_load = async () => {
 	requestAnimationFrame(run_frame);
 
 	f.onclick = () => g.requestFullscreen && g.requestFullscreen().catch?.(() => {});
+	let started = false;
 	const startGame = () => {
+		if (started) return;
+		started = true;
 		const isTouch = document.body.classList.contains('touch-on') || ('ontouchstart' in window && navigator.maxTouchPoints > 0);
 		g.onclick = () => {
 			if (!isTouch && c.requestPointerLock) {

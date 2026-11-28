@@ -4,6 +4,7 @@ document.body.innerHTML +=
 		'html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;color:#fff;background:#07080b;text-align:center;touch-action:none;user-select:none;-webkit-user-select:none;}'+
 		'#g{position:relative;width:100vw;height:100vh;display:flex;align-items:center;justify-content:center;background:#050608;font-weight:bold;cursor:crosshair;touch-action:none;}'+
 		'#c{display:block;width:100%;height:100%;image-rendering:optimizeSpeed;image-rendering:pixelated;object-fit:contain;touch-action:none;}'+
+		'@media (max-width: 720px){#c{object-fit:cover;}}'+
 		'#ts{position:absolute;inset:0;z-index:25;display:flex;flex-direction:column;align-items:center;justify-content:center;background:radial-gradient(circle,rgba(7,8,11,0.32),rgba(7,8,11,0.85));pointer-events:none;padding:16px;}'+
 		'#ts h1{font-size:clamp(30px,7vw,76px);margin:0;letter-spacing:0.12em;color:#F3FF00;text-shadow:0 0 24px rgba(243,255,0,0.45);}'+
 		'#ts .sub{margin-top:10px;font-size:clamp(12px,1.8vw,16px);color:#00F0D4;letter-spacing:0.1em;}'+
